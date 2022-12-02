@@ -6,15 +6,17 @@ from parse_call import TradingCall, TradingCallParser
 dotenv_path = os.path.join(os.path.dirname(__file__), ".env")
 load_dotenv(dotenv_path)
 
-API_KEY = os.getenv("API_KEY")
-API_SECRET = os.getenv("API_SECRET")
-API_URL = os.getenv("API_URL")
+BINANCE_API_KEY = os.getenv("API_KEY")
+BINANCE_API_SECRET = os.getenv("API_SECRET")
+BINANCE_API_URL = os.getenv("API_URL")
+
+ORDER_SIZE = 250  # USD per trade
 
 ORDER_SIZE = 250  # USD per trade
 
 
 def run_binance_api():
-    client = Client(base_url=API_URL)
+    client = Client(base_url=BINANCE_API_URL)
 
     # Get server timestamp
     print(client.time())
@@ -24,7 +26,7 @@ def run_binance_api():
     print(client.klines("BNBUSDT", "1h", limit=10))
 
     # API key/secret are required for user data endpoints
-    client = Client(API_KEY, API_SECRET, base_url=API_URL)
+    client = Client(BINANCE_API_KEY, BINANCE_API_SECRET, base_url=BINANCE_API_URL)
 
     # Get account and balance information
     print(client.account())
@@ -57,7 +59,9 @@ def fetch_trades():
 
 class BinanceAPI:
     def __init__(self):
-        self.client = Client(API_KEY, API_SECRET, base_url=API_URL)
+        self.client = Client(
+            BINANCE_API_KEY, BINANCE_API_SECRET, base_url=BINANCE_API_URL
+        )
 
     def send_open_order(self, trade: TradingCall):
         if not trade.open_order == {} or not trade.side == "BUY":
