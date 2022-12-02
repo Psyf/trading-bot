@@ -1,7 +1,9 @@
 import os
 from binance.spot import Spot as Client
 from dotenv import load_dotenv
-from parse_call import TradingCall, TradingCallParser
+from parse_call import TradingCallParser
+from models import TradingCall, Message
+import datetime
 
 dotenv_path = os.path.join(os.path.dirname(__file__), ".env")
 load_dotenv(dotenv_path)
@@ -47,8 +49,7 @@ def parse_trade():
     # limit pairs available in test api. So, we use BTC
     with open("trading_call_btc.txt", "r") as f:
         content = f.read()
-        print(content)
-        return TradingCallParser().parse(content)
+        return TradingCallParser().parse(Message(0, content, datetime.datetime.now()))
 
 
 def fetch_trades():
@@ -71,14 +72,14 @@ class BinanceAPI:
 
         # Post a new order
         quantity = round(ORDER_SIZE / trade.entry[0], 6)
-
+        print(quantity)
         params = {
             "symbol": trade.symbol,
             "side": trade.side,
             "type": "LIMIT_MAKER",
             "timeInForce": "GTC",
             "quantity": quantity,
-            "price": max(trade.entry),
+            "price": max(iter(trade.entry)),
         }
         # print(client.ticker_price("BTCUSDT"))
         # print(client.get_order("BTCUSDT", orderId="20200470"))

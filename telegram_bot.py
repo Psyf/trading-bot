@@ -1,9 +1,12 @@
 import datetime
 from telethon import TelegramClient, events
-from models import Message
+from models import TradingCall, Message
 import re
 import os
 from dotenv import load_dotenv
+from parse_call import TradingCallParser
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 
 dotenv_path = os.path.join(os.path.dirname(__file__), ".env")
 load_dotenv(dotenv_path)
@@ -12,13 +15,10 @@ client = TelegramClient(
     "name", int(os.getenv("TELEGRAM_API_ID")), os.getenv("TELEGRAM_API_HASH")
 )
 
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-
 # Create an engine that connects to the database
 engine = create_engine("sqlite:///tradingbot.db")
 session = sessionmaker(bind=engine)()
-Message.metadata.create_all(engine, checkfirst=True)
+TradingCall.metadata.create_all(engine, checkfirst=True)
 
 
 def main():
@@ -29,7 +29,7 @@ def main():
     client.start()
     for message in client.iter_messages(
         entity="Over99PercentWins",
-        offset_date=datetime.datetime(2022, 11, 20),
+        offset_date=datetime.datetime(2022, 12, 2),
         reverse=True,
     ):
         if "Take-Profit Number" in message.text:
@@ -40,13 +40,11 @@ def main():
                 num_brags[int(number)] += 1
         elif "All take-profit targets achieved" in message.text:
             num_brags[6] += 1
-        elif "Setup" in message.text:
+        elif "setup" in message.text.lower():
             num_calls += 1
         else:
-            print(message.text)
-            # raise Exception("Unknown message type")
+            print("UNKNOWN MESSAGE ->", message.text)
 
-        # Check if message.id is already in the database
         filter_and_save(message)
 
     print(num_calls)
@@ -62,18 +60,15 @@ async def handler(event):
 
 
 def filter_and_save(message):
-    if "Setup" in message.text and not session.query(Message).get(message.id):
-        # Create a new message object
-        new_message = Message(
-            id=message.id,
-            date=message.date,
-            text=message.text,
-        )
-        # Add the new message to the database
-        session.add(new_message)
-        # Commit the changes to the database
-        session.commit()
-        print("New Message:\n", message.date, "\n", message.id, "\n", message.text)
+    if "setup" in message.text.lower():
+        if not session.query(TradingCall).get(message.id):
+            new_call = TradingCallParser().parse(message)
+            session.add(new_call)
+            session.commit()
+            print(new_call)
+            # print("New Message:\n", message.date, "\n", message.id, "\n", message.text)
+        else:
+            print("Already exists")
 
 
 main()

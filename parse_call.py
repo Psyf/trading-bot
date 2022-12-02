@@ -1,19 +1,5 @@
-from dataclasses import dataclass, field
-import datetime
-from typing import Dict, Literal, Tuple
 import re
-
-
-@dataclass
-class TradingCall:
-    symbol: str
-    side: Literal["BUY", "SELL"]
-    entry: Tuple[float, float]
-    stop_loss: float
-    targets: list[float]
-    timestamp: datetime.time
-    open_order: Dict[str, str | int] = field(default_factory=dict)
-    close_orders: list[Dict] = field(default_factory=list)
+from models import TradingCall
 
 
 class TradingCallParser:
@@ -21,7 +7,7 @@ class TradingCallParser:
         pass
 
     def tokenize(self, txt: str) -> dict[str, str]:
-        match = re.search(r"setup: ([a-z]+)", txt)
+        match = re.search(r"setup:\*\* ([a-z]+)", txt)
         if match:
             return {"symbol": match.group(1).upper()}
 
@@ -45,27 +31,29 @@ class TradingCallParser:
             return {"target": match.group(1)}
         return {}
 
-    def parse(self, txt: str) -> TradingCall:
+    def parse(self, message) -> TradingCall:
         # Parse the text
         targets = []
-        entry = (0.0, 0.0)
+        entry = []
         parsed_data: dict[str, str] = {}
-        for line in txt.lower().split("\n"):
+        for line in message.text.lower().split("\n"):
             t = self.tokenize(line)
             if "target" in t:
                 targets.append(float(t["target"]))
             elif "entry" in t:
                 splits = t["entry"].split("-")
-                entries = [float(s.strip()) for s in splits]
-                entry = (entries[0], entries[1])
+                entry = [float(s.strip()) for s in splits]
             else:
                 parsed_data.update(t)
 
         return TradingCall(
+            id=message.id,
             symbol=parsed_data["symbol"],
             side=parsed_data["side"],  # type: ignore
             entry=entry,  # descending for long, asc for short
             stop_loss=float(parsed_data["stop_loss"]),
             targets=sorted(targets),  # ascending for long desc for short
-            timestamp=datetime.datetime.now().time(),
+            timestamp=message.date,
+            open_order=dict(),
+            close_orders=list(),
         )
