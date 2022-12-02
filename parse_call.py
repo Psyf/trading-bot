@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+import datetime
 from typing import Literal, Tuple
 import re
 
@@ -10,6 +11,9 @@ class TradingCall:
     entry: Tuple[float, float]
     stop_loss: float
     targets: list[float]
+    timestamp: datetime.time
+    open_order: dict = {}
+    close_orders: list[dict] = {}
 
 
 class TradingCallParser:
@@ -60,7 +64,8 @@ class TradingCallParser:
         return TradingCall(
             symbol=parsed_data["symbol"],
             side=parsed_data["side"],  # type: ignore
-            entry=entry,
+            entry=entry,  # descending for long, asc for short
             stop_loss=float(parsed_data["stop_loss"]),
-            targets=targets,
+            targets=sorted(targets),  # ascending for long desc for short
+            timestamp=datetime.datetime.now().time(),
         )
