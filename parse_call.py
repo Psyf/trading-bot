@@ -1,6 +1,6 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import datetime
-from typing import Literal, Tuple
+from typing import Dict, Literal, Tuple
 import re
 
 
@@ -12,8 +12,8 @@ class TradingCall:
     stop_loss: float
     targets: list[float]
     timestamp: datetime.time
-    open_order: dict = {}
-    close_orders: list[dict] = {}
+    open_order: Dict[str, str | int] = field(default_factory=dict)
+    close_orders: list[Dict] = field(default_factory=list)
 
 
 class TradingCallParser:

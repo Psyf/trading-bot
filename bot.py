@@ -1,4 +1,3 @@
-import dataclasses
 import os
 from binance.spot import Spot as Client
 from dotenv import load_dotenv
@@ -93,7 +92,9 @@ class BinanceAPI:
         return [
             trade
             for trade in pendingOrders
-            if self.client.get_order("BTCUSDT", orderId=trade.open_order)["status"]
+            if self.client.get_order("BTCUSDT", orderId=trade.open_order["orderId"])[
+                "status"
+            ]
             == "FILLED"
         ]
 
@@ -108,15 +109,16 @@ class BinanceAPI:
             ),
             "stopPrice": trade.stop_loss,
         }
+        qty = float(trade.open_order["origQty"])
         paramsOne = params.copy()
         paramsOne["price"] = trade.targets[2]
-        paramsOne["quantity"] = round(trade.open_order["origQty"] / 2)
+        paramsOne["quantity"] = round(qty / 2)
         responseOne = self.client.new_order(**paramsOne)
 
         print(responseOne)
         paramsTwo = params.copy()
         paramsTwo["price"] = trade.targets[4]
-        paramsTwo["quantity"] = trade.open_order["origQty"] - paramsOne["quantity"]
+        paramsTwo["quantity"] = qty - paramsOne["quantity"]
 
         responseTwo = self.client.new_order(**paramsTwo)
         print(responseTwo)
