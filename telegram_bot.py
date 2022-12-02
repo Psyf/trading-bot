@@ -47,13 +47,18 @@ def main():
             # raise Exception("Unknown message type")
 
         # Check if message.id is already in the database
-        new_message = Message(id=message.id, date=message.date, text=message.text)
-        if not session.query(Message).where(Message.id == message.id).first():
+        if "Setup" in message.text and not session.query(Message).get(message.id):
+            # Create a new message object
+            new_message = Message(
+                id=message.id,
+                date=message.date,
+                text=message.text,
+            )
+            # Add the new message to the database
             session.add(new_message)
+            # Commit the changes to the database
             session.commit()
             print("New Message:\n", message.date, "\n", message.id, "\n", message.text)
-        # else:
-        # print(message.id, "already in database")
 
     print(num_calls)
     print(num_brags)

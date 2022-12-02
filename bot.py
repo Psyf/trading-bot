@@ -54,6 +54,7 @@ def parse_trade():
 
 
 def fetch_trades():
+    # TODO: return from sqlite
     return [parse_trade()]
 
 
@@ -136,13 +137,11 @@ class BinanceAPI:
 
 def main():
     binance_api = BinanceAPI()
-    pendingOrders = []  # read pending orders from sqlite
-    filledOrders = binance_api.check_pending_orders(pendingOrders)
-    binance_api.send_close_orders(filledOrders)
-
-    # TODO read from telegram bot
+    pendingLimitOrders = []  # TODO: read pending orders from sqlite
+    filledLimitOrders = binance_api.check_pending_orders(pendingLimitOrders)
+    binance_api.send_close_orders(filledLimitOrders)
     trades = fetch_trades()
-    pendingOrders = binance_api.send_open_orders(trades)
+    pendingLimitOrders = binance_api.send_open_orders(trades)
     # TODO - save pendingOrders to sql lite
 
 
