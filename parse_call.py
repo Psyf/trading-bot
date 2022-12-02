@@ -36,7 +36,7 @@ class TradingCallParser:
         if match:
             return {"stop_loss": match.group(1)}
 
-        match = re.search(r"target.*(\d+\.\d+)", txt)
+        match = re.search(r"target [\d]+ • (\d+\.\d+)", txt)
         if match:
             return {"target": match.group(1)}
         return {}
