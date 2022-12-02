@@ -1,14 +1,16 @@
-📇 Setup: GALAUSDT
+📇 Setup: MATICUSDT
 
 Long Trade 🛫 
 
-☑️ Entry Zone: 0.02565 - 0.02561
+☑️ Entry Zone: 0.9212 - 0.9188
 
-💯 Stop-Loss: 0.023598
+💯 Stop-Loss: 0.847504
 
-💰 Target 1 • 0.02578
-💰 Target 2 • 0.025983
-💰 Target 3 • 0.026188
-💰 Target 4 • 0.026547
-💰 Target 5 • 0.026752
-💰 Target 6 • 0.026983
+💰 Target 1 • 0.925898
+💰 Target 2 • 0.933175
+💰 Target 3 • 0.940545
+💰 Target 4 • 0.953442
+💰 Target 5 • 0.960811
+💰 Target 6 • 0.969102
+
+✔️ Leverage → Lower than 20x

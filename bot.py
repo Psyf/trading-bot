@@ -42,7 +42,8 @@ def run_binance_api():
 
 
 def parse_trade():
-    with open("trading_call.txt", "r") as f:
+    # limit pairs available in test api. So, we use BTC
+    with open("trading_call_btc.txt", "r") as f:
         content = f.read()
         print(content)
         return TradingCallParser().parse(content)
@@ -57,13 +58,15 @@ def main():
     print(client.account())
 
     # Post a new order
+    quantity = round(1000 / trade.entry[0], 6)
+
     params = {
         "symbol": trade.symbol,
         "side": trade.side,
-        "type": "LIMIT",
+        "type": "LIMIT",  # can also do LIMIT_MAKER, maybe lower fees.
         "timeInForce": "GTC",
-        "quantity": 0.002,
-        "price": trade.entry[0],
+        "quantity": quantity,
+        "price": max(trade.entry),
     }
 
     response = client.new_order(**params)
