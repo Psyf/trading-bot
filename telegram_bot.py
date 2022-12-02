@@ -18,10 +18,6 @@ Message.metadata.create_all(engine, checkfirst=True)
 
 
 def main():
-    num_brags = {}
-    for i in range(6):
-        num_brags[i + 1] = 0
-    num_calls = 0
     client.start()
     for message in client.iter_messages(
         entity="Over99PercentWins",
