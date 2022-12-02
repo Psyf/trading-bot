@@ -102,7 +102,6 @@ class BinanceAPI:
         params = {
             "symbol": trade.symbol,
             "side": "SELL" if trade.side == "BUY" else "BUY",
-            "type": "OCO",
             "stopLimitTimeInForce": "GTC",
             "stopLimitPrice": round(
                 trade.stop_loss * (0.99 if trade.side == "BUY" else 1.01), 6
@@ -110,17 +109,18 @@ class BinanceAPI:
             "stopPrice": trade.stop_loss,
         }
         qty = float(trade.open_order["origQty"])
+
         paramsOne = params.copy()
         paramsOne["price"] = trade.targets[2]
-        paramsOne["quantity"] = round(qty / 2)
-        responseOne = self.client.new_order(**paramsOne)
+        paramsOne["quantity"] = round(qty / 2, 6)
+        responseOne = self.client.new_oco_order(**paramsOne)
 
         print(responseOne)
         paramsTwo = params.copy()
         paramsTwo["price"] = trade.targets[4]
         paramsTwo["quantity"] = qty - paramsOne["quantity"]
 
-        responseTwo = self.client.new_order(**paramsTwo)
+        responseTwo = self.client.new_oco_order(**paramsTwo)
         print(responseTwo)
 
         trade.close_orders = [responseOne, responseTwo]
