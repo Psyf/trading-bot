@@ -1,0 +1,21 @@
+[tool.poetry]
+name = "trading-bot"
+version = "0.1.0"
+description = "trading bot"
+authors = ["Mad Neutrino <madneutrino@jezer0x.com>"]
+readme = "README.md"
+packages = [{include = "trading_bot"}]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+binance-connector = "^1.18.0"
+python-dotenv = "^0.21.0"
+
+
+[tool.poetry.group.dev.dependencies]
+black = "^22.10.0"
+flake8 = "^6.0.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
