@@ -1,6 +1,6 @@
 import datetime
 from telethon import TelegramClient, events
-from models import TradingCall, Message
+from models import TradingCall
 import re
 import os
 from dotenv import load_dotenv
@@ -66,7 +66,6 @@ def filter_and_save(message):
             session.add(new_call)
             session.commit()
             print(new_call)
-            # print("New Message:\n", message.date, "\n", message.id, "\n", message.text)
         else:
             print("Already exists")
 
