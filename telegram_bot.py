@@ -47,18 +47,7 @@ def main():
             # raise Exception("Unknown message type")
 
         # Check if message.id is already in the database
-        if "Setup" in message.text and not session.query(Message).get(message.id):
-            # Create a new message object
-            new_message = Message(
-                id=message.id,
-                date=message.date,
-                text=message.text,
-            )
-            # Add the new message to the database
-            session.add(new_message)
-            # Commit the changes to the database
-            session.commit()
-            print("New Message:\n", message.date, "\n", message.id, "\n", message.text)
+        filter_and_save(message)
 
     print(num_calls)
     print(num_brags)
@@ -69,7 +58,22 @@ def main():
 # print new messages as they arrive
 @client.on(events.NewMessage(chats="Over99PercentWins"))
 async def handler(event):
-    print(event.message.text)
+    filter_and_save(event.message)
+
+
+def filter_and_save(message):
+    if "Setup" in message.text and not session.query(Message).get(message.id):
+        # Create a new message object
+        new_message = Message(
+            id=message.id,
+            date=message.date,
+            text=message.text,
+        )
+        # Add the new message to the database
+        session.add(new_message)
+        # Commit the changes to the database
+        session.commit()
+        print("New Message:\n", message.date, "\n", message.id, "\n", message.text)
 
 
 main()
