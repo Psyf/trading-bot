@@ -4,6 +4,8 @@ from dotenv import load_dotenv
 from parse_call import TradingCallParser
 from models import TradingCall, Message
 import datetime
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 
 dotenv_path = os.path.join(os.path.dirname(__file__), ".env")
 load_dotenv(dotenv_path)
@@ -13,6 +15,10 @@ BINANCE_API_SECRET = os.getenv("API_SECRET")
 BINANCE_API_URL = os.getenv("API_URL")
 
 ORDER_SIZE = 250  # USD per trade
+
+# Create an engine that connects to the database
+engine = create_engine("sqlite:///tradingbot.db")
+session = sessionmaker(bind=engine)()
 
 
 def run_binance_api():
@@ -52,9 +58,14 @@ def parse_trade():
         return TradingCallParser().parse(Message(0, content, datetime.datetime.now()))
 
 
-def fetch_trades():
-    # TODO: return from sqlite
-    return [parse_trade()]
+def fetch_unseen_trades(latest_first: bool = True, limit=10):
+    return (
+        session.query(TradingCall)
+        .filter(TradingCall.open_order == None)
+        .order_by(TradingCall.id.desc())
+        .limit(limit)
+        .all()
+    )
 
 
 class BinanceAPI:
@@ -64,7 +75,7 @@ class BinanceAPI:
         )
 
     def send_open_order(self, trade: TradingCall):
-        if not trade.open_order == {} or not trade.side == "BUY":
+        if not trade.open_order is not None or not trade.side == "BUY":
             # We dont support SHORT orders yet.
             return trade
         # Get account and balance information
@@ -136,12 +147,25 @@ class BinanceAPI:
 
 def main():
     binance_api = BinanceAPI()
-    pendingLimitOrders = []  # TODO: read pending orders from sqlite
+    pendingLimitOrders = (
+        session.query(TradingCall)
+        .filter(TradingCall.open_order != None)
+        .filter(TradingCall.close_orders == None)
+        .all()
+    )
+    print(pendingLimitOrders)
     filledLimitOrders = binance_api.check_pending_orders(pendingLimitOrders)
     binance_api.send_close_orders(filledLimitOrders)
-    trades = fetch_trades()
-    pendingLimitOrders = binance_api.send_open_orders(trades)
-    # TODO - save pendingOrders to sql lite
+    unseen_trades = fetch_unseen_trades(
+        latest_first=True, limit=10
+    )  # TODO: limit = BUSD available / ORDER_SIZE
+    pendingLimitOrders = binance_api.send_open_orders(unseen_trades)
+
+    # TODO: Token accounting
+    # TODO: see all the pending orders and if they've been too long pending, cull
+
+    # send_close/open_orders mutate the entities in the database
+    session.commit()
 
 
 main()

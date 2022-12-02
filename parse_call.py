@@ -54,6 +54,4 @@ class TradingCallParser:
             stop_loss=float(parsed_data["stop_loss"]),
             targets=sorted(targets),  # ascending for long desc for short
             timestamp=message.date,
-            open_order=dict(),
-            close_orders=list(),
         )
