@@ -12,8 +12,6 @@ BINANCE_API_URL = os.getenv("API_URL")
 
 ORDER_SIZE = 250  # USD per trade
 
-ORDER_SIZE = 250  # USD per trade
-
 
 def run_binance_api():
     client = Client(base_url=BINANCE_API_URL)
