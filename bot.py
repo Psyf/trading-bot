@@ -1,4 +1,5 @@
 import os
+import time
 from typing import List
 from binance.spot import Spot as Client
 from dotenv import load_dotenv
@@ -185,9 +186,7 @@ class BinanceAPI:
         return [self.send_close_order(trade) for trade in filledOrders]
 
 
-def main():
-    binance_api = BinanceAPI()
-    # print(binance_api.client.account())
+def step(binance_api: BinanceAPI):
     pendingLimitOrders = (
         session.query(TradingCall)
         .filter(TradingCall.open_order.is_not(None))
@@ -214,13 +213,12 @@ def main():
     )
 
     if account_balance > ORDER_SIZE:
-    unseen_trades = fetch_unseen_trades(
+        unseen_trades = fetch_unseen_trades(
             latest_first=True, limit=50
-    )  # TODO: limit = BUSD available / ORDER_SIZE
+        )  # TODO: limit = BUSD available / ORDER_SIZE
 
-    print(unseen_trades)
+        print(unseen_trades)
         viable_trades = binance_api.filter_viable_trades(unseen_trades)
-
         pendingLimitOrders = binance_api.send_open_orders(viable_trades)
     else:
         print("Insufficient USDT balance")
@@ -230,6 +228,16 @@ def main():
 
     # send_close/open_orders mutate the entities in the database
     session.commit()
+
+
+def main():
+    binance_api = BinanceAPI()
+    # print(binance_api.client.account())
+
+    # sleep for 30 seconds, and then invoke step() again
+    while True:
+        step(binance_api)
+        time.sleep(30)
 
 
 main()
