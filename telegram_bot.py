@@ -23,17 +23,21 @@ TradingCall.metadata.create_all(engine, checkfirst=True)
 
 
 def main():
-    num_brags = dict()
-    calls = defaultdict(dict)
-    for i in range(7):
-        num_brags[i + 1] = 0
-    num_calls = 0
+    # num_brags = dict()
+    # calls = defaultdict(dict)
+    # for i in range(7):
+    #     num_brags[i + 1] = 0
+    # num_calls = 0
     client.start()
+    offset_date = (
+        datetime.datetime.now() - datetime.timedelta(days=5)
+    ).date()  # Get from 2 days ago
     for message in client.iter_messages(
         entity="Over99PercentWins",
-        offset_date=datetime.datetime(2022, 11, 25),
+        offset_date=offset_date,
         reverse=True,
     ):
+
         # if "Setup" in message.text:
         #     try:
         #         call = TradingCallParser().parse(message)
@@ -126,9 +130,8 @@ def filter_and_save(message):
                 print("New call => ", new_call)
             except:
                 print("Could not parse call => ", message.id)
-
         else:
-            print("Already exists")
+            print("Already exists => ", message.id)
 
 
 main()
