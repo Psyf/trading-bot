@@ -149,8 +149,8 @@ def main():
     binance_api = BinanceAPI()
     pendingLimitOrders = (
         session.query(TradingCall)
-        .filter(TradingCall.open_order != None)
-        .filter(TradingCall.close_orders == None)
+        .filter(TradingCall.open_order is not None)
+        .filter(TradingCall.close_orders is None)
         .all()
     )
     print(pendingLimitOrders)
