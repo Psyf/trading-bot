@@ -63,10 +63,14 @@ def parse_trade():
         return TradingCallParser().parse(Message(0, content, datetime.datetime.now()))
 
 
-def fetch_unseen_trades(latest_first: bool = True, limit=10):
+def fetch_unseen_trades(latest_first: bool = True, limit=10, lookback_hours=1):
     return (
         session.query(TradingCall)
         .filter(TradingCall.open_order == None)
+        .filter(
+            TradingCall.timestamp
+            >= datetime.datetime.now() - datetime.timedelta(hours=lookback_hours)
+        )
         .order_by(TradingCall.id.desc() if latest_first else TradingCall.id.asc())
         .limit(limit)
         .all()
