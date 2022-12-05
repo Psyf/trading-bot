@@ -91,6 +91,13 @@ class BinanceAPI:
             print(current_price)
             if current_price < min_price or current_price > max_price:
                 print("skipping {}".format(trade.symbol))
+                # for testing.
+                # trade.entry = [
+                #     round(current_price * 0.96, 5),
+                #     round(current_price * 0.95, 5),
+                # ]
+                # trade.targets[5] = round(current_price * 1.02, 5)
+                # yield trade
                 continue
             else:
                 yield trade
@@ -105,21 +112,26 @@ class BinanceAPI:
         assert info["ocoAllowed"]
         print(info)
 
-        precision = step_size_to_precision(
+        qty_precision = step_size_to_precision(
             [i["stepSize"] for i in info["filters"] if i["filterType"] == "LOT_SIZE"][0]
         )
 
+        price_filters = [
+            i for i in info["filters"] if i["filterType"] == "PRICE_FILTER"
+        ][0]
+        price_precision = step_size_to_precision(price_filters["tickSize"])
+
         # Post a new order
-        quantity = round(ORDER_SIZE / trade.entry[0], precision)
-        print(quantity)
+        quantity = round(ORDER_SIZE / trade.entry[0], qty_precision)
 
         params = {
             "symbol": trade.symbol,
             "side": trade.side,
             "type": "LIMIT_MAKER",
             "quantity": quantity,
-            "price": max(iter(trade.entry)),
+            "price": round(max(iter(trade.entry)), price_precision),
         }
+
         # print(client.ticker_price("BTCUSDT"))
         # print(client.get_order("BTCUSDT", orderId="20200470"))
         response = self.client.new_order(**params)
