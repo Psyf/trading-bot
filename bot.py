@@ -144,22 +144,34 @@ class BinanceAPI:
 
 def main():
     binance_api = BinanceAPI()
+    # print(binance_api.client.account())
     pendingLimitOrders = (
         session.query(TradingCall)
         .filter(TradingCall.open_order is not None)
         .filter(TradingCall.close_orders is None)
         .all()
     )
-    # Get account and balance information
-    print(binance_api.client.account())
     print(pendingLimitOrders)
     filledLimitOrders = binance_api.check_pending_orders(pendingLimitOrders)
+    print(filledLimitOrders)
+    # Get account and balance information
+    account_balance = float(
+        [
+            b["free"]
+            for b in binance_api.client.account()["balances"]
+            if b["asset"] == "USDT"
+        ][0]
+    )
+
+    if account_balance > ORDER_SIZE:
     binance_api.send_close_orders(filledLimitOrders)
     unseen_trades = fetch_unseen_trades(
-        latest_first=True, limit=10
+            latest_first=True, limit=50
     )  # TODO: limit = BUSD available / ORDER_SIZE
     print(unseen_trades)
     pendingLimitOrders = binance_api.send_open_orders(unseen_trades)
+    else:
+        print("Insufficient USDT balance")
 
     # TODO: Token accounting
     # TODO: see all the pending orders and if they've been too long pending, cull
