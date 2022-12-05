@@ -33,7 +33,6 @@ def main():
         entity="Over99PercentWins",
         offset_date=datetime.datetime(2022, 11, 25),
         reverse=True,
-        limit=1000,
     ):
         if "Setup" in message.text:
             try:
@@ -42,7 +41,7 @@ def main():
                 calls[message.id]["loss"] = (
                     call.stop_loss - call.entry[0]
                 ) / call.entry[0]
-                calls[message.id]["take_profit"] = list(range(6))
+                calls[message.id]["take_profit"] = [0] * 6
                 continue
             except:
                 print("Could not parse call => ", message.id, message.text)
@@ -59,14 +58,14 @@ def main():
         try:
             orig_call = calls[orig_id]["message"]
         except KeyError:
-            # get the message from telegram given id
+            # message was older than offset_date. Get it!
             for message_old in client.iter_messages("Over99PercentWins", ids=orig_id):
                 orig_call = TradingCallParser().parse(message_old)
                 calls[orig_id]["message"] = orig_call
                 calls[orig_id]["loss"] = (
                     orig_call.stop_loss - orig_call.entry[0]
                 ) / orig_call.entry[0]
-                calls[orig_id]["take_profit"] = list(range(6))
+                calls[orig_id]["take_profit"] = [0] * 6
 
         entry = orig_call.entry[0]
 
@@ -75,19 +74,19 @@ def main():
             if match:
                 # The number is the first group in the regex match
                 number = match.group(1)
-                calls[message.id]["loss"] = 0
+                calls[orig_id]["loss"] = 0
                 target = orig_call.targets[int(number) - 1]
                 calls[orig_id]["take_profit"][int(number) - 1] = (
                     target - entry
                 ) / entry
                 num_brags[int(number)] += 1
         elif "All take-profit targets achieved" in message.text:
-            calls[message.id]["loss"] = 0
+            calls[orig_id]["loss"] = 0
             target = orig_call.targets[5]
             calls[orig_id]["take_profit"][5] = (target - entry) / entry
             num_brags[6] += 1
         elif "Cancelled" in message.text:
-            calls[message.id]["loss"] = 0
+            calls[orig_id]["loss"] = 0
             num_brags[7] += 1
         else:
             print("UNKNOWN MESSAGE -> ", message.text)
@@ -100,19 +99,15 @@ def main():
     for k, v in num_brags.items():
         print(k, "=> ", v / num_calls)
 
-    losses = 0
-    profits = 0
+    percentage_returns = 0
+    TAKE_AT_TARGET = 5
     for k, v in calls.items():
-        if "loss" in v:
-            losses += v["loss"]
-            assert v["loss"] < 0
-            print(v["loss"])
-        elif "take_profit" in v:
-            for i in range(5, -1):
-                if i in v["take_profit"]:
-                    profits += v["take_profit"][i]
+        percentage_returns += v["loss"]
+        percentage_returns += v["take_profit"][TAKE_AT_TARGET - 1]
+        # for idx, profit in enumerate(v["take_profit"]):
+        #     percentage_returns += profit
 
-            print(v["take_profit"])
+    print(percentage_returns / num_calls)
 
 
 # print new messages as they arrive
