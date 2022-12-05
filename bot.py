@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 from parse_call import TradingCallParser
 from models import TradingCall, Message
 import datetime
+from sqlalchemy import sql
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
@@ -93,8 +94,8 @@ class BinanceAPI:
                 print("skipping {}".format(trade.symbol))
                 # for testing.
                 # trade.entry = [
-                #     round(current_price * 0.96, 5),
-                #     round(current_price * 0.95, 5),
+                #     round(current_price * 0.99, 5),
+                #     round(current_price * 0.98, 5),
                 # ]
                 # trade.targets[5] = round(current_price * 1.02, 5)
                 # yield trade
@@ -110,7 +111,6 @@ class BinanceAPI:
         info = self.client.exchange_info(trade.symbol)["symbols"][0]
         # TODO sanity check on the asset pair
         assert info["ocoAllowed"]
-        print(info)
 
         qty_precision = step_size_to_precision(
             [i["stepSize"] for i in info["filters"] if i["filterType"] == "LOT_SIZE"][0]
