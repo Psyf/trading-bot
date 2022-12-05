@@ -17,7 +17,7 @@ class TradingCallParser:
             if side != "LONG" and side != "SHORT":
                 raise ValueError("Invalid trade type")
             return {"side": "BUY" if side == "LONG" else "SELL"}
-        match = re.search(r"entry zone: (\d+\.\d+[^\d]*\d+\.\d+)", txt)
+        match = re.search(r"entry zone: (\d+(\.\d+)? - \d+(\.\d+)?)", txt)
 
         if match:
             return {"entry": match.group(1)}
@@ -33,9 +33,9 @@ class TradingCallParser:
 
     def parse(self, message) -> TradingCall:
         # Parse the text
-        targets = []
-        entry = []
-        parsed_data: dict[str, str] = {}
+        targets = list()
+        entry = list()
+        parsed_data: dict[str, str] = dict()
         for line in message.text.lower().split("\n"):
             t = self.tokenize(line)
             if "target" in t:
@@ -45,6 +45,8 @@ class TradingCallParser:
                 entry = [float(s.strip()) for s in splits]
             else:
                 parsed_data.update(t)
+
+        # TODO: some validation to make sure it was parsed proper
 
         return TradingCall(
             id=message.id,
