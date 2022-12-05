@@ -41,8 +41,7 @@ def run_binance_api():
     params = {
         "symbol": "BTCUSDT",
         "side": "SELL",
-        "type": "LIMIT",
-        "timeInForce": "GTC",
+        "type": "LIMIT_MAKER",
         "quantity": 0.002,
         "price": 9500,
     }
@@ -75,11 +74,9 @@ class BinanceAPI:
         )
 
     def send_open_order(self, trade: TradingCall):
-        if not trade.open_order is not None or not trade.side == "BUY":
+        if trade.open_order is not None or trade.side != "BUY":
             # We dont support SHORT orders yet.
             return trade
-        # Get account and balance information
-        print(self.client.account())
 
         # Post a new order
         quantity = round(ORDER_SIZE / trade.entry[0], 6)
@@ -153,12 +150,15 @@ def main():
         .filter(TradingCall.close_orders is None)
         .all()
     )
+    # Get account and balance information
+    print(binance_api.client.account())
     print(pendingLimitOrders)
     filledLimitOrders = binance_api.check_pending_orders(pendingLimitOrders)
     binance_api.send_close_orders(filledLimitOrders)
     unseen_trades = fetch_unseen_trades(
         latest_first=True, limit=10
     )  # TODO: limit = BUSD available / ORDER_SIZE
+    print(unseen_trades)
     pendingLimitOrders = binance_api.send_open_orders(unseen_trades)
 
     # TODO: Token accounting
