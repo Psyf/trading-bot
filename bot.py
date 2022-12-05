@@ -1,4 +1,5 @@
 import os
+from typing import List
 from binance.spot import Spot as Client
 from dotenv import load_dotenv
 from parse_call import TradingCallParser
@@ -19,6 +20,10 @@ ORDER_SIZE = 250  # USD per trade
 # Create an engine that connects to the database
 engine = create_engine("sqlite:///tradingbot.db")
 session = sessionmaker(bind=engine)()
+
+
+def step_size_to_precision(ss):
+    return ss.find("1") - 1
 
 
 def run_binance_api():
@@ -73,19 +78,45 @@ class BinanceAPI:
             BINANCE_API_KEY, BINANCE_API_SECRET, base_url=BINANCE_API_URL
         )
 
+    def filter_viable_trades(self, trades: List[TradingCall]):
+        for trade in trades:
+            max_price = trade.targets[2]
+            min_price = trade.stop_loss
+
+            # ONLY FOR TEST NET. It has a limited asset list ###
+            if trade.symbol != "LTCUSDT":
+                continue
+
+            current_price = float(self.client.avg_price(trade.symbol)["price"])
+            print(current_price)
+            if current_price < min_price or current_price > max_price:
+                print("skipping {}".format(trade.symbol))
+                continue
+            else:
+                yield trade
+
     def send_open_order(self, trade: TradingCall):
         if trade.open_order is not None or trade.side != "BUY":
             # We dont support SHORT orders yet.
             return trade
 
+        info = self.client.exchange_info(trade.symbol)["symbols"][0]
+        # TODO sanity check on the asset pair
+        assert info["ocoAllowed"]
+        print(info)
+
+        precision = step_size_to_precision(
+            [i["stepSize"] for i in info["filters"] if i["filterType"] == "LOT_SIZE"][0]
+        )
+
         # Post a new order
-        quantity = round(ORDER_SIZE / trade.entry[0], 6)
+        quantity = round(ORDER_SIZE / trade.entry[0], precision)
         print(quantity)
+
         params = {
             "symbol": trade.symbol,
             "side": trade.side,
             "type": "LIMIT_MAKER",
-            "timeInForce": "GTC",
             "quantity": quantity,
             "price": max(iter(trade.entry)),
         }
@@ -104,7 +135,7 @@ class BinanceAPI:
         return [
             trade
             for trade in pendingOrders
-            if self.client.get_order("BTCUSDT", orderId=trade.open_order["orderId"])[
+            if self.client.get_order(trade.symbol, orderId=trade.open_order["orderId"])[
                 "status"
             ]
             == "FILLED"
@@ -147,13 +178,20 @@ def main():
     # print(binance_api.client.account())
     pendingLimitOrders = (
         session.query(TradingCall)
-        .filter(TradingCall.open_order is not None)
-        .filter(TradingCall.close_orders is None)
+        .filter(TradingCall.open_order.is_not(None))
+        .filter(TradingCall.close_orders.is_(None))
         .all()
     )
     print(pendingLimitOrders)
+
+    # for o in pendingLimitOrders:
+    #     o.open_order = sql.null()
+    # session.commit()
+    # return
     filledLimitOrders = binance_api.check_pending_orders(pendingLimitOrders)
     print(filledLimitOrders)
+    binance_api.send_close_orders(filledLimitOrders)
+
     # Get account and balance information
     account_balance = float(
         [
@@ -164,12 +202,14 @@ def main():
     )
 
     if account_balance > ORDER_SIZE:
-    binance_api.send_close_orders(filledLimitOrders)
     unseen_trades = fetch_unseen_trades(
             latest_first=True, limit=50
     )  # TODO: limit = BUSD available / ORDER_SIZE
+
     print(unseen_trades)
-    pendingLimitOrders = binance_api.send_open_orders(unseen_trades)
+        viable_trades = binance_api.filter_viable_trades(unseen_trades)
+
+        pendingLimitOrders = binance_api.send_open_orders(viable_trades)
     else:
         print("Insufficient USDT balance")
 
