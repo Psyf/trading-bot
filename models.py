@@ -11,12 +11,12 @@ class TradingCall(Base):
     __tablename__ = "trading_calls"
 
     id = Column(Integer, primary_key=True)
-    symbol = Column(String)
-    side = Column(Enum("BUY", "SELL"))
-    entry = Column(JSON)  # Should be [float, float]
-    stop_loss = Column(Float)
-    targets = Column(JSON)  # should be float[6]
-    timestamp = Column(DateTime)
+    symbol = Column(String, nullable=False)
+    side = Column(Enum("BUY", "SELL"), nullable=False)
+    entry = Column(JSON, nullable=False)  # Should be [float, float]
+    stop_loss = Column(Float, nullable=False)
+    targets = Column(JSON, nullable=False)  # should be float[6]
+    timestamp = Column(DateTime, nullable=False)
     open_order = Column(JSON)  # should be {open_order_resp}
     close_orders = Column(JSON)  # should be {close_order_resp}[2]
 
