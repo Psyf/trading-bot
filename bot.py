@@ -6,7 +6,6 @@ from dotenv import load_dotenv
 from parse_call import TradingCallParser
 from models import TradingCall, Message
 import datetime
-from sqlalchemy import sql
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
@@ -68,7 +67,7 @@ def fetch_unseen_trades(latest_first: bool = True, limit=10):
     return (
         session.query(TradingCall)
         .filter(TradingCall.open_order == None)
-        .order_by(TradingCall.id.desc())
+        .order_by(TradingCall.id.desc() if latest_first else TradingCall.id.asc())
         .limit(limit)
         .all()
     )
@@ -234,9 +233,12 @@ def main():
     binance_api = BinanceAPI()
     # print(binance_api.client.account())
 
-    # sleep for 30 seconds, and then invoke step() again
     while True:
-        step(binance_api)
+        try:
+            step(binance_api)
+        except:
+            print("Step failed!")
+
         time.sleep(30)
 
 
