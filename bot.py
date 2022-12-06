@@ -94,7 +94,7 @@ class BinanceAPI:
                 continue
 
             current_price = float(self.client.avg_price(trade.symbol)["price"])
-            print(current_price)
+
             if current_price < min_price or current_price > max_price:
                 print("skipping {}".format(trade.symbol))
                 # for testing.
@@ -137,11 +137,8 @@ class BinanceAPI:
             "price": round(max(iter(trade.entry)), price_precision),
         }
 
-        # print(client.ticker_price("BTCUSDT"))
-        # print(client.get_order("BTCUSDT", orderId="20200470"))
         response = self.client.new_order(**params)
-        print(response)
-        print(response["orderId"])
+        print("New limit order creation response =>", response)
         confirmed_order = self.client.get_order(
             trade.symbol, orderId=response["orderId"]
         )
@@ -185,7 +182,7 @@ class BinanceAPI:
         paramsOne["quantity"] = round(qty / 2, 6)
         responseOne = self.client.new_oco_order(**paramsOne)
 
-        print(responseOne)
+        print("OCO Order 1 => ", responseOne)
         confirmedOrderOne = self.client.get_order(
             trade.symbol, orderId=responseOne["orderId"]
         )
@@ -197,7 +194,7 @@ class BinanceAPI:
         confirmedOrderTwo = self.client.get_order(
             trade.symbol, orderId=responseTwo["orderId"]
         )
-        print(responseTwo)
+        print("OCO Order 2 => ", responseTwo)
 
         trade.close_orders = [confirmedOrderOne, confirmedOrderTwo]
         return trade
@@ -213,14 +210,15 @@ def step(binance_api: BinanceAPI):
         .filter(TradingCall.close_orders.is_(None))
         .all()
     )
-    print(pendingLimitOrders)
+    print("--- NEW STEP ---", datetime.datetime.now(), "----")
+    print("Pending limit orders =>", pendingLimitOrders)
 
     # for o in pendingLimitOrders:
     #     o.open_order = sql.null()
     # session.commit()
     # return
     filledLimitOrders = binance_api.update_order_statuses(pendingLimitOrders)
-    print(filledLimitOrders)
+    print("Filled limit orders =>", filledLimitOrders)
     binance_api.send_close_orders(filledLimitOrders)
 
     # Get account and balance information
@@ -237,11 +235,11 @@ def step(binance_api: BinanceAPI):
             latest_first=True, limit=50
         )  # TODO: limit = BUSD available / ORDER_SIZE
 
-        print(unseen_trades)
+        print("Unseen trades =>", unseen_trades)
         viable_trades = binance_api.filter_viable_trades(unseen_trades)
         pendingLimitOrders = binance_api.send_open_orders(viable_trades)
     else:
-        print("Insufficient USDT balance")
+        print("!!! Insufficient USDT balance !!!")
 
     # TODO: Token accounting
     # TODO: see all the pending orders and if they've been too long pending, cull
@@ -252,13 +250,13 @@ def step(binance_api: BinanceAPI):
 
 def main():
     binance_api = BinanceAPI()
-    # print(binance_api.client.account())
 
     while True:
         try:
             step(binance_api)
         except Exception as e:
             # print detailed trace of the error
+            print("!!! step failed :/ !!!")
             print(traceback.format_exc())
 
         time.sleep(30)
