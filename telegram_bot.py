@@ -6,6 +6,8 @@ from dotenv import load_dotenv
 from parse_call import TradingCallParser
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+import logging
+import sys
 
 dotenv_path = os.path.join(os.path.dirname(__file__), ".env")
 load_dotenv(dotenv_path)
@@ -18,6 +20,19 @@ client = TelegramClient(
 engine = create_engine("sqlite:///tradingbot.db")
 session = sessionmaker(bind=engine)()
 TradingCall.metadata.create_all(engine, checkfirst=True)
+
+
+# SETUP LOGGING to log to file with timestamp and console and auto-rotate
+logging.basicConfig(
+    format="%(asctime)s %(message)s",
+    handlers=[
+        logging.FileHandler(
+            "logs/telegram-" + datetime.datetime.utcnow().strftime("%s") + ".log"
+        ),
+        logging.StreamHandler(sys.stdout),
+    ],
+    level=logging.INFO,
+)
 
 
 def main():
@@ -33,7 +48,7 @@ def main():
         filter_and_save(message)
 
 
-# print new messages as they arrive
+# save new messages as they arrive
 @client.on(events.NewMessage(chats="Over99PercentWins"))
 async def handler(event):
     filter_and_save(event.message)
@@ -46,11 +61,11 @@ def filter_and_save(message):
                 new_call = TradingCallParser().parse(message)
                 session.add(new_call)
                 session.commit()
-                print("New call => ", new_call)
+                logging.info("New call => " + str(new_call))
             except:
-                print("Could not parse call => ", message.id)
+                logging.error("Could not parse call => " + str(message.id))
         else:
-            print("Already exists => ", message.id)
+            logging.info("Already exists => " + str(message.id))
 
 
 main()
