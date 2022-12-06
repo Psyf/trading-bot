@@ -245,8 +245,8 @@ def step(binance_api: BinanceAPI):
 
     if account_balance > ORDER_SIZE:
         unseen_trades = fetch_unseen_trades(
-            latest_first=True, limit=50
-        )  # TODO: limit = BUSD available / ORDER_SIZE
+            latest_first=True, limit=int(account_balance // ORDER_SIZE)
+        )
 
         logging.info("Unseen trades =>" + str(unseen_trades))
         viable_trades = binance_api.filter_viable_trades(unseen_trades)
