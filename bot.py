@@ -48,42 +48,6 @@ def format_price(price: float, exchange_info):
     return round(price, price_precision)
 
 
-def run_binance_api():
-    client = Client(base_url=BINANCE_API_URL)
-
-    # Get server timestamp
-    print(client.time())
-    # Get klines of BTCUSDT at 1m interval
-    print(client.klines("BTCUSDT", "1m"))
-    # Get last 10 klines of BNBUSDT at 1h interval
-    print(client.klines("BNBUSDT", "1h", limit=10))
-
-    # API key/secret are required for user data endpoints
-    client = Client(BINANCE_API_KEY, BINANCE_API_SECRET, base_url=BINANCE_API_URL)
-
-    # Get account and balance information
-    print(client.account())
-
-    # Post a new order
-    params = {
-        "symbol": "BTCUSDT",
-        "side": "SELL",
-        "type": "LIMIT_MAKER",
-        "quantity": 0.002,
-        "price": 9500,
-    }
-
-    response = client.new_order(**params)
-    print(response)
-
-
-def parse_trade():
-    # limit pairs available in test api. So, we use BTC
-    with open("trading_call_btc.txt", "r") as f:
-        content = f.read()
-        return TradingCallParser().parse(Message(0, content, datetime.datetime.now()))
-
-
 def fetch_unseen_trades(latest_first: bool = True, limit=10, lookback_hours=1):
     return (
         session.query(TradingCall)
@@ -246,7 +210,7 @@ def step(binance_api: BinanceAPI):
         .filter(TradingCall.close_orders.is_(None))
         .all()
     )
-    print("--- NEW STEP ---", datetime.datetime.now(), "----")
+    print("--- NEW STEP ---")
     print("Pending limit orders =>", pendingLimitOrders)
 
     # for o in pendingLimitOrders:
