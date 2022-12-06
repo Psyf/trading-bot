@@ -65,7 +65,7 @@ def format_price(price: float, exchange_info):
 def fetch_unseen_trades(latest_first: bool = True, limit=10, lookback_hours=1):
     return (
         session.query(TradingCall)
-        .filter(TradingCall.open_order == None)
+        .filter(TradingCall.open_order.is_(None))
         .filter(
             TradingCall.timestamp
             >= datetime.datetime.now() - datetime.timedelta(hours=lookback_hours)
