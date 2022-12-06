@@ -23,7 +23,7 @@ engine = create_engine("sqlite:///tradingbot.db")
 session = sessionmaker(bind=engine)()
 
 # CONSTANTS
-ORDER_SIZE = 250  # USD per trade
+ORDER_SIZE = 100  # USD per trade
 
 # SETUP LOGGING to log to file with timestamp and console and auto-rotate
 logging.basicConfig(
