@@ -8,6 +8,7 @@ from models import TradingCall, Message
 import datetime
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+import traceback
 
 dotenv_path = os.path.join(os.path.dirname(__file__), ".env")
 load_dotenv(dotenv_path)
@@ -256,8 +257,9 @@ def main():
     while True:
         try:
             step(binance_api)
-        except:
-            print("Step failed!")
+        except Exception as e:
+            # print detailed trace of the error
+            print(traceback.format_exc())
 
         time.sleep(30)
 
