@@ -131,6 +131,11 @@ class BinanceAPI:
             trade.symbol, orderId=response["orderId"]
         )
         trade.open_order = confirmed_order
+
+        session.add(trade)
+        session.commit()
+        logging.info(f"New limit order => {trade.id} : {trade.open_order}")
+
         return trade
 
     def send_open_orders(self, trades):
@@ -140,7 +145,9 @@ class BinanceAPI:
         order = self.client.get_order(trade.symbol, orderId=trade.open_order["orderId"])
         if order["status"] != trade.open_order.get("status", None):
             trade.open_order = order
-
+            session.add(trade)
+            session.commit()
+            logging.info(f"Filled limit order => {trade.id} : {order}")
         return trade
 
     def update_order_statuses(self, pendingOrders: list[TradingCall]):
@@ -207,6 +214,11 @@ class BinanceAPI:
         # )
 
         trade.close_orders = [responseOne, responseTwo]
+
+        session.add(trade)
+        session.commit()
+        logging.info(f"New oco orders => {trade.id} : {trade.close_orders}")
+
         return trade
 
     def send_close_orders(self, filledOrders: list[TradingCall]):
@@ -221,16 +233,14 @@ def step(binance_api: BinanceAPI):
         .all()
     )
     logging.info("--- NEW STEP ---")
-    logging.info("Pending limit orders =>" + str(pendingLimitOrders))
+    logging.info(f"Pending limit orders => {pendingLimitOrders}")
 
     # for o in pendingLimitOrders:
     #     o.open_order = sql.null()
     # session.commit()
     # return
     filledLimitOrders = binance_api.update_order_statuses(pendingLimitOrders)
-    logging.info("Filled limit orders =>" + str(filledLimitOrders))
-    close_orders = binance_api.send_close_orders(filledLimitOrders)
-    logging.info("New oco orders =>" + str(close_orders))
+    binance_api.send_close_orders(filledLimitOrders)
 
     # Get account and balance information
     account_balance = float(
@@ -245,11 +255,9 @@ def step(binance_api: BinanceAPI):
         unseen_trades = fetch_unseen_trades(
             latest_first=True, limit=int(account_balance // ORDER_SIZE)
         )
-
-        logging.info("Unseen trades =>" + str(unseen_trades))
+        logging.info(f"Unseen trades => {unseen_trades}")
         viable_trades = binance_api.filter_viable_trades(unseen_trades)
         pendingLimitOrders = binance_api.send_open_orders(viable_trades)
-        logging.info("New limit orders =>" + str(pendingLimitOrders))
     else:
         logging.info("!!! Insufficient USDT balance !!!")
 
