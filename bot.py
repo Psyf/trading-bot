@@ -16,7 +16,7 @@ BINANCE_API_KEY = os.getenv("API_KEY")
 BINANCE_API_SECRET = os.getenv("API_SECRET")
 BINANCE_API_URL = os.getenv("API_URL")
 
-ORDER_SIZE = 250  # USD per trade
+ORDER_SIZE = 50  # USD per trade
 
 # Create an engine that connects to the database
 engine = create_engine("sqlite:///tradingbot.db")
