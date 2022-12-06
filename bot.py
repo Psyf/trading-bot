@@ -127,7 +127,6 @@ class BinanceAPI:
         }
 
         response = self.client.new_order(**params)
-        logging.info("New limit order creation response => " + response)
         confirmed_order = self.client.get_order(
             trade.symbol, orderId=response["orderId"]
         )
@@ -195,8 +194,6 @@ class BinanceAPI:
         paramsOne["quantity"] = format_quantity(qty / 2, info)
         responseOne = self.send_oco_or_market(paramsOne, current_price)
 
-        logging.info("OCO Order 1 => " + responseOne)
-
         paramsTwo = params.copy()
         paramsTwo["price"] = format_price(max([trade.targets[4], current_price]), info)
         paramsTwo["quantity"] = format_quantity(qty - paramsOne["quantity"], info)
@@ -208,7 +205,7 @@ class BinanceAPI:
         # confirmedOrderTwo = self.client.get_order(
         #     trade.symbol, orderId=responseTwo["orderId"]
         # )
-        logging.info("OCO Order 2 => " + responseTwo)
+
         trade.close_orders = [responseOne, responseTwo]
         return trade
 
@@ -232,7 +229,8 @@ def step(binance_api: BinanceAPI):
     # return
     filledLimitOrders = binance_api.update_order_statuses(pendingLimitOrders)
     logging.info("Filled limit orders =>" + str(filledLimitOrders))
-    binance_api.send_close_orders(filledLimitOrders)
+    close_orders = binance_api.send_close_orders(filledLimitOrders)
+    logging.info("New oco orders =>" + str(close_orders))
 
     # Get account and balance information
     account_balance = float(
@@ -251,14 +249,12 @@ def step(binance_api: BinanceAPI):
         logging.info("Unseen trades =>" + str(unseen_trades))
         viable_trades = binance_api.filter_viable_trades(unseen_trades)
         pendingLimitOrders = binance_api.send_open_orders(viable_trades)
+        logging.info("New limit orders =>" + str(pendingLimitOrders))
     else:
         logging.info("!!! Insufficient USDT balance !!!")
 
     # TODO: Token accounting
     # TODO: see all the pending orders and if they've been too long pending, cull
-
-    # send_close/open_orders mutate the entities in the database
-    session.commit()
 
 
 def main():
@@ -269,8 +265,8 @@ def main():
             step(binance_api)
         except Exception as e:
             # logging.info detailed trace of the error
-            logging.info("!!! step failed :/ !!!")
-            logging.info(traceback.format_exc())
+            logging.error("!!! step failed :/ !!!")
+            logging.error(traceback.format_exc())
 
         time.sleep(30)
 
