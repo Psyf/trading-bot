@@ -165,9 +165,9 @@ class BinanceAPI:
             "symbol": trade.symbol,
             "side": "SELL" if trade.side == "BUY" else "BUY",
             "stopLimitTimeInForce": "GTC",
-            "stopLimitPrice": format_price(
-                trade.stop_loss * (0.99 if trade.side == "BUY" else 1.01), info
-            ),
+            # "stopLimitPrice": format_price(
+            #     trade.stop_loss * (0.99 if trade.side == "BUY" else 1.01), info
+            # ),
             "stopPrice": format_price(trade.stop_loss, info),
             "newOrderRespType": "FULL",
         }
