@@ -87,9 +87,9 @@ class BinanceAPI:
             max_price = trade.targets[2]
             min_price = trade.stop_loss
 
-            # ONLY FOR TEST NET. It has a limited asset list ###
-            if trade.symbol != "LTCUSDT":
-                continue
+            # # ONLY FOR TEST NET. It has a limited asset list ###
+            # if trade.symbol != "LTCUSDT":
+            #     continue
 
             current_price = float(self.client.avg_price(trade.symbol)["price"])
 
