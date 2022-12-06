@@ -240,15 +240,6 @@ class BinanceAPI:
 
 
 def step(binance_api: BinanceAPI):
-    account_balance = float(
-        [
-            b["free"]
-            for b in binance_api.client.account()["balances"]
-            if b["asset"] == "LTC"
-        ][0]
-    )
-    print(account_balance)
-    return
     pendingLimitOrders = (
         session.query(TradingCall)
         .filter(TradingCall.open_order.is_not(None))
@@ -266,7 +257,6 @@ def step(binance_api: BinanceAPI):
     print("Filled limit orders =>", filledLimitOrders)
 
     binance_api.send_close_orders(filledLimitOrders)
-    return
 
     # Get account and balance information
     account_balance = float(
