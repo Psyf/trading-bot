@@ -27,6 +27,26 @@ def step_size_to_precision(ss):
     return ss.find("1") - 1
 
 
+def format_quantity(qty: float, exchange_info):
+    qty_precision = step_size_to_precision(
+        [
+            i["stepSize"]
+            for i in exchange_info["filters"]
+            if i["filterType"] == "LOT_SIZE"
+        ][0]
+    )
+    return round(qty, qty_precision)
+
+
+def format_price(price: float, exchange_info):
+    price_precision = step_size_to_precision(
+        [i for i in exchange_info["filters"] if i["filterType"] == "PRICE_FILTER"][0][
+            "tickSize"
+        ]
+    )
+    return round(price, price_precision)
+
+
 def run_binance_api():
     client = Client(base_url=BINANCE_API_URL)
 
@@ -115,25 +135,16 @@ class BinanceAPI:
         info = self.client.exchange_info(trade.symbol)["symbols"][0]
         # TODO sanity check on the asset pair
         assert info["ocoAllowed"]
-
-        qty_precision = step_size_to_precision(
-            [i["stepSize"] for i in info["filters"] if i["filterType"] == "LOT_SIZE"][0]
-        )
-
-        price_filters = [
-            i for i in info["filters"] if i["filterType"] == "PRICE_FILTER"
-        ][0]
-        price_precision = step_size_to_precision(price_filters["tickSize"])
-
-        # Post a new order
-        quantity = round(ORDER_SIZE / trade.entry[0], qty_precision)
+        quantity = format_quantity(ORDER_SIZE / trade.entry[0], info)
 
         params = {
             "symbol": trade.symbol,
             "side": trade.side,
             "type": "LIMIT_MAKER",
             "quantity": quantity,
-            "price": round(max(iter(trade.entry)), price_precision),
+            "price": format_price(max(iter(trade.entry)), info),
+            # TODO this might help avoid calling get_order again. need to confirm
+            "newOrderRespType": "FULL",
         }
 
         # print(client.ticker_price("BTCUSDT"))
@@ -167,38 +178,64 @@ class BinanceAPI:
             if trade.open_order.get("status", None) == "FILLED"
         ]
 
+    def send_oco_or_market(self, params, current_price):
+        return (
+            self.client.new_order(
+                **{
+                    "symbol": params["symbol"],
+                    "side": params["side"],
+                    "type": "MARKET",
+                    "quantity": params["quantity"],
+                    "newOrderRespType": params["newOrderRespType"],
+                }
+            )
+            if current_price > params["price"]
+            else self.client.new_oco_order(**params)
+        )
+
     def send_close_order(self, trade: TradingCall):
+        info = self.client.exchange_info(trade.symbol)["symbols"][0]
+        assert info["ocoAllowed"]
+        current_price = float(self.client.avg_price(trade.symbol)["price"])
+        print(current_price)
+
         params = {
             "symbol": trade.symbol,
             "side": "SELL" if trade.side == "BUY" else "BUY",
             "stopLimitTimeInForce": "GTC",
-            "stopLimitPrice": round(
-                trade.stop_loss * (0.99 if trade.side == "BUY" else 1.01), 6
+            "stopLimitPrice": format_price(
+                trade.stop_loss * (0.99 if trade.side == "BUY" else 1.01), info
             ),
-            "stopPrice": trade.stop_loss,
+            "stopPrice": format_price(trade.stop_loss, info),
+            "newOrderRespType": "FULL",
         }
-        qty = float(trade.open_order["executedQty"])
 
+        qty = float(trade.open_order["executedQty"])
         paramsOne = params.copy()
-        paramsOne["price"] = trade.targets[2]
-        paramsOne["quantity"] = round(qty / 2, 6)
-        responseOne = self.client.new_oco_order(**paramsOne)
+        # TODO: We are setting the OCO value to market if the target has been hit.
+        # This seems to work. Which means the or_market order will only
+        # be required if the market price changes. The right way is to probably do a catch and then do a market
+        # if the OCO fails for price reasons.
+        paramsOne["price"] = format_price(max([trade.targets[2], current_price]), info)
+        paramsOne["quantity"] = format_quantity(qty / 2, info)
+        responseOne = self.send_oco_or_market(paramsOne, current_price)
 
         print(responseOne)
-        confirmedOrderOne = self.client.get_order(
-            trade.symbol, orderId=responseOne["orderId"]
-        )
-        paramsTwo = params.copy()
-        paramsTwo["price"] = trade.targets[4]
-        paramsTwo["quantity"] = qty - paramsOne["quantity"]
 
-        responseTwo = self.client.new_oco_order(**paramsTwo)
-        confirmedOrderTwo = self.client.get_order(
-            trade.symbol, orderId=responseTwo["orderId"]
-        )
+        paramsTwo = params.copy()
+        paramsTwo["price"] = format_price(max([trade.targets[4], current_price]), info)
+        paramsTwo["quantity"] = format_quantity(qty - paramsOne["quantity"], info)
+
+        responseTwo = self.send_oco_or_market(paramsTwo, current_price)
+        # confirmedOrderOne = self.client.get_order(
+        #     trade.symbol, orderId=responseOne["orderId"]
+        # )
+        # confirmedOrderTwo = self.client.get_order(
+        #     trade.symbol, orderId=responseTwo["orderId"]
+        # )
         print(responseTwo)
 
-        trade.close_orders = [confirmedOrderOne, confirmedOrderTwo]
+        trade.close_orders = [responseOne, responseTwo]
         return trade
 
     def send_close_orders(self, filledOrders: list[TradingCall]):
@@ -206,6 +243,15 @@ class BinanceAPI:
 
 
 def step(binance_api: BinanceAPI):
+    account_balance = float(
+        [
+            b["free"]
+            for b in binance_api.client.account()["balances"]
+            if b["asset"] == "LTC"
+        ][0]
+    )
+    print(account_balance)
+    return
     pendingLimitOrders = (
         session.query(TradingCall)
         .filter(TradingCall.open_order.is_not(None))
@@ -220,7 +266,9 @@ def step(binance_api: BinanceAPI):
     # return
     filledLimitOrders = binance_api.update_order_statuses(pendingLimitOrders)
     print(filledLimitOrders)
+
     binance_api.send_close_orders(filledLimitOrders)
+    return
 
     # Get account and balance information
     account_balance = float(
@@ -251,6 +299,8 @@ def step(binance_api: BinanceAPI):
 
 def main():
     binance_api = BinanceAPI()
+    step(binance_api)
+    return
     # print(binance_api.client.account())
 
     while True:
