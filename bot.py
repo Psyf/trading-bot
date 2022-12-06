@@ -23,7 +23,7 @@ engine = create_engine("sqlite:///tradingbot.db")
 session = sessionmaker(bind=engine)()
 
 # CONSTANTS
-ORDER_SIZE = 250  # USD per trade
+ORDER_SIZE = 100  # USD per trade
 
 # SETUP LOGGING to log to file with timestamp and console and auto-rotate
 logging.basicConfig(
@@ -65,7 +65,7 @@ def format_price(price: float, exchange_info):
 def fetch_unseen_trades(latest_first: bool = True, limit=10, lookback_hours=1):
     return (
         session.query(TradingCall)
-        .filter(TradingCall.open_order == None)
+        .filter(TradingCall.open_order.is_(None))
         .filter(
             TradingCall.timestamp
             >= datetime.datetime.now() - datetime.timedelta(hours=lookback_hours)
@@ -87,9 +87,9 @@ class BinanceAPI:
             max_price = trade.targets[2]
             min_price = trade.stop_loss
 
-            # ONLY FOR TEST NET. It has a limited asset list ###
-            if trade.symbol != "LTCUSDT":
-                continue
+            # # ONLY FOR TEST NET. It has a limited asset list ###
+            # if trade.symbol != "LTCUSDT":
+            #     continue
 
             current_price = float(self.client.avg_price(trade.symbol)["price"])
 
