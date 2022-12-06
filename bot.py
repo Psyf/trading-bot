@@ -137,20 +137,30 @@ class BinanceAPI:
         response = self.client.new_order(**params)
         print(response)
         print(response["orderId"])
-        trade.open_order = response
+        confirmed_order = self.client.get_order(
+            trade.symbol, orderId=response["orderId"]
+        )
+        trade.open_order = confirmed_order
         return trade
 
     def send_open_orders(self, trades):
         return [self.send_open_order(trade) for trade in trades]
 
-    def check_pending_orders(self, pendingOrders: list[TradingCall]):
+    def update_order_status(self, trade: TradingCall):
+        order = self.client.get_order(trade.symbol, orderId=trade.open_order["orderId"])
+        if order["status"] != trade.open_order.get("status", None):
+            trade.open_order = order
+
+        return trade
+
+    def update_order_statuses(self, pendingOrders: list[TradingCall]):
+        return [self.update_order_status(trade) for trade in pendingOrders]
+
+    def filter_filled_orders(self, trades):
         return [
             trade
-            for trade in pendingOrders
-            if self.client.get_order(trade.symbol, orderId=trade.open_order["orderId"])[
-                "status"
-            ]
-            == "FILLED"
+            for trade in trades
+            if trade.open_order.get("status", None) == "FILLED"
         ]
 
     def send_close_order(self, trade: TradingCall):
@@ -163,7 +173,7 @@ class BinanceAPI:
             ),
             "stopPrice": trade.stop_loss,
         }
-        qty = float(trade.open_order["origQty"])
+        qty = float(trade.open_order["executedQty"])
 
         paramsOne = params.copy()
         paramsOne["price"] = trade.targets[2]
@@ -171,14 +181,20 @@ class BinanceAPI:
         responseOne = self.client.new_oco_order(**paramsOne)
 
         print(responseOne)
+        confirmedOrderOne = self.client.get_order(
+            trade.symbol, orderId=responseOne["orderId"]
+        )
         paramsTwo = params.copy()
         paramsTwo["price"] = trade.targets[4]
         paramsTwo["quantity"] = qty - paramsOne["quantity"]
 
         responseTwo = self.client.new_oco_order(**paramsTwo)
+        confirmedOrderTwo = self.client.get_order(
+            trade.symbol, orderId=responseTwo["orderId"]
+        )
         print(responseTwo)
 
-        trade.close_orders = [responseOne, responseTwo]
+        trade.close_orders = [confirmedOrderOne, confirmedOrderTwo]
         return trade
 
     def send_close_orders(self, filledOrders: list[TradingCall]):
@@ -200,7 +216,7 @@ def main():
     #     o.open_order = sql.null()
     # session.commit()
     # return
-    filledLimitOrders = binance_api.check_pending_orders(pendingLimitOrders)
+    filledLimitOrders = binance_api.update_order_statuses(pendingLimitOrders)
     print(filledLimitOrders)
     binance_api.send_close_orders(filledLimitOrders)
 
