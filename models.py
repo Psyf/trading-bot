@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, Float, JSON, Enum
+from sqlalchemy import Column, Integer, String, DateTime, Float, JSON, Enum, Boolean
 from sqlalchemy.ext.declarative import declarative_base
 from dataclasses import dataclass
 import datetime
@@ -19,6 +19,9 @@ class TradingCall(Base):
     timestamp = Column(DateTime, nullable=False)
     open_order = Column(JSON)  # should be {open_order_resp}
     close_orders = Column(JSON)  # should be {close_order_resp}[2]
+    texthash = Column(String, nullable=False)
+    bragged = Column(Boolean, nullable=False, default=False)
+    completed = Column(Boolean, nullable=False, default=False)
 
     def __repr__(self):
         return f"TradingCall({self.id}, {self.timestamp}, {self.symbol}, {self.side}, entry={self.entry}, stop_loss={self.stop_loss}, targets={self.targets}, open_order={self.open_order}, close_orders={self.close_orders})"

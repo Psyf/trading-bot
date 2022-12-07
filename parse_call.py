@@ -1,5 +1,6 @@
 import re
 from models import TradingCall
+from hashlib import sha256
 
 
 class TradingCallParser:
@@ -56,4 +57,5 @@ class TradingCallParser:
             stop_loss=float(parsed_data["stop_loss"]),
             targets=sorted(targets),  # ascending for long desc for short
             timestamp=message.date,
+            texthash=sha256(message.text.encode("utf-8")).hexdigest(),
         )

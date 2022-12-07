@@ -233,6 +233,8 @@ class BinanceAPI:
             paramsOne["quantity"] = format_quantity(qty / 2, info)
             responseOne = self.send_close_or_market(paramsOne, current_price)
 
+            # TODO: if second req fails, nothing gets recorded... need to fix
+
             paramsTwo = params.copy()
             paramsTwo["price"] = format_price(
                 max([trade.targets[4], current_price]), info
