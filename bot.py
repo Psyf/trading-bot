@@ -159,7 +159,7 @@ class BinanceAPI:
     def update_opening_order_statuses(self, pendingOrders: list[TradingCall]):
         return [self.update_opening_order_status(trade) for trade in pendingOrders]
 
-    def update_closing_orders_status(self, trade: TradingCall):
+    def update_closing_order_status(self, trade: TradingCall):
         order = self.client.get_order(
             trade.symbol, orderId=trade.close_order["orderId"]
         )
@@ -170,8 +170,8 @@ class BinanceAPI:
             logging.info(f"Filled closing limit order => {trade.id} : {order}")
         return trade
 
-    def update_closing_orders_statuses(self, pendingOrders: list[TradingCall]):
-        return [self.update_closing_orders_status(trade) for trade in pendingOrders]
+    def update_closing_order_statuses(self, pendingOrders: list[TradingCall]):
+        return [self.update_closing_order_status(trade) for trade in pendingOrders]
 
     def filter_filled_opening_orders(self, trades):
         return [
@@ -262,7 +262,7 @@ def step(binance_api: BinanceAPI):
     pendingClosingLimitOrders = (
         session.query(TradingCall).filter(TradingCall.close_order.is_not(None)).all()
     )
-    binance_api.update_closing_orders_statuses(pendingClosingLimitOrders)
+    binance_api.update_closing_order_statuses(pendingClosingLimitOrders)
 
     # TODO: see all the pending orders and if they've been too long pending, cull
 
