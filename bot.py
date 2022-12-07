@@ -83,6 +83,7 @@ def get_pending_opening_limit_orders():
         session.query(TradingCall)
         .filter(TradingCall.open_order.is_not(None))
         .filter(TradingCall.close_order.is_(None))
+        .filter(TradingCall.completed is False)
         .all()
     )
 
@@ -184,6 +185,7 @@ class BinanceAPI:
         )
         if order["status"] != trade.close_order["orderId"].get("status", None):
             trade.close_order = order
+            trade.completed = True
             session.add(trade)
             session.commit()
             logging.info(f"Filled closing limit order => {trade.id} : {order}")
@@ -221,6 +223,13 @@ class BinanceAPI:
                 - datetime.datetime.fromtimestamp(trade.close_order.get("time"))
             )
             > datetime.timedelta(hours=max_expiry_hours)
+        ]
+
+    def filter_need_to_stop_loss(self, trades):
+        return [
+            trade
+            for trade in trades
+            if float(self.client.avg_price(trade.symbol)["price"]) < trade.stop_loss
         ]
 
     def send_close_or_market(self, params, current_price):
@@ -284,19 +293,42 @@ class BinanceAPI:
 
     def send_cancel_open_orders(self, trades: list[TradingCall]):
         for trade in trades:
-            self.client.cancel_order(trade.symbol, orderId=trade.open_order["orderId"])
-            trade.completed = True
-            trade.reason = "Open Order took too long to fill"
-            session.commit()
-            logging.info(f"Cancelled open order => {trade.id}")
+            try:
+                self.client.cancel_order(
+                    trade.symbol, orderId=trade.open_order["orderId"]
+                )
+                trade.completed = True
+                trade.reason = "Open Order took too long to fill"
+                session.commit()
+                logging.info(f"Cancelled open order => {trade.id}")
+            except:
+                logging.info(f"Could not cancel open order => {trade.id}")
 
     def send_cancel_close_orders(self, trades: list[TradingCall]):
         for trade in trades:
-            self.client.cancel_order(trade.symbol, orderId=trade.close_order["orderId"])
-            trade.completed = True
-            trade.reason = "Close order took too long to fill"
-            session.commit()
-            logging.info(f"Cancelled close order => {trade.id}")
+            try:
+                self.client.cancel_order(
+                    trade.symbol, orderId=trade.close_order["orderId"]
+                )
+            except:
+                logging.info(f"Could not cancel close order => {trade.id}")
+
+            try:
+                self.client.new_order(
+                    **{
+                        "symbol": trade.symbol,
+                        "side": "SELL",
+                        "type": "MARKET",
+                        "quantity": trade.close_order["origQty"],
+                        "newOrderRespType": "FULL",
+                    }
+                )
+                trade.completed = True
+                trade.reason = "Close order took too long to fill"
+                session.commit()
+                logging.info(f"Cancelled close order => {trade.id}")
+            except:
+                logging.error(f"Could not market order => {trade.id}")
 
 
 def step(binance_api: BinanceAPI):
@@ -326,7 +358,9 @@ def step(binance_api: BinanceAPI):
         )
     )
 
-    # TODO stop loss
+    binance_api.filter_need_to_stop_loss(
+        get_pending_closing_limit_orders() + get_pending_opening_limit_orders()
+    )
 
     # Get account and balance information
     account_balance = float(
