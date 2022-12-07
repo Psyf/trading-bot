@@ -136,8 +136,8 @@ class BinanceAPI:
             session.add(trade)
             session.commit()
             logging.info(f"New limit order => {trade.id} : {trade.open_order}")
-        except:
-            logging.error(f"Could not create new limit order => {trade.id}")
+        except Exception as e:
+            logging.error(f"Could not create new limit order => {trade.id} : {e}")
 
         return trade
 
@@ -226,8 +226,8 @@ class BinanceAPI:
             session.add(trade)
             session.commit()
             logging.info(f"New oco orders => {trade.id} : {trade.close_orders}")
-        except:
-            logging.error(f"Could not create new oco orders => {trade.id}")
+        except Exception as e:
+            logging.error(f"Could not create new oco orders => {trade.id} : {e}")
 
         return trade
 
