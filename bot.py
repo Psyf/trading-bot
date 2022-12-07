@@ -111,30 +111,33 @@ class BinanceAPI:
             # We dont support SHORT orders yet.
             return trade
 
-        info = self.client.exchange_info(trade.symbol)["symbols"][0]
-        # TODO sanity check on the asset pair
-        assert info["ocoAllowed"]
-        quantity = format_quantity(ORDER_SIZE / trade.entry[0], info)
+        try:
+            info = self.client.exchange_info(trade.symbol)["symbols"][0]
+            # TODO sanity check on the asset pair
+            assert info["ocoAllowed"]
+            quantity = format_quantity(ORDER_SIZE / trade.entry[0], info)
 
-        params = {
-            "symbol": trade.symbol,
-            "side": trade.side,
-            "type": "LIMIT_MAKER",
-            "quantity": quantity,
-            "price": format_price(max(iter(trade.entry)), info),
-            # TODO this might help avoid calling get_order again. need to confirm
-            "newOrderRespType": "FULL",
-        }
+            params = {
+                "symbol": trade.symbol,
+                "side": trade.side,
+                "type": "LIMIT_MAKER",
+                "quantity": quantity,
+                "price": format_price(max(iter(trade.entry)), info),
+                # TODO this might help avoid calling get_order again. need to confirm
+                "newOrderRespType": "FULL",
+            }
 
-        response = self.client.new_order(**params)
-        confirmed_order = self.client.get_order(
-            trade.symbol, orderId=response["orderId"]
-        )
-        trade.open_order = confirmed_order
+            response = self.client.new_order(**params)
+            confirmed_order = self.client.get_order(
+                trade.symbol, orderId=response["orderId"]
+            )
+            trade.open_order = confirmed_order
 
-        session.add(trade)
-        session.commit()
-        logging.info(f"New limit order => {trade.id} : {trade.open_order}")
+            session.add(trade)
+            session.commit()
+            logging.info(f"New limit order => {trade.id} : {trade.open_order}")
+        except:
+            logging.error(f"Could not create new limit order => {trade.id}")
 
         return trade
 
@@ -176,48 +179,55 @@ class BinanceAPI:
         )
 
     def send_close_order(self, trade: TradingCall):
-        info = self.client.exchange_info(trade.symbol)["symbols"][0]
-        assert info["ocoAllowed"]
-        current_price = float(self.client.avg_price(trade.symbol)["price"])
+        try:
+            info = self.client.exchange_info(trade.symbol)["symbols"][0]
+            assert info["ocoAllowed"]
+            current_price = float(self.client.avg_price(trade.symbol)["price"])
 
-        params = {
-            "symbol": trade.symbol,
-            "side": "SELL" if trade.side == "BUY" else "BUY",
-            # "stopLimitTimeInForce": "GTC",
-            # "stopLimitPrice": format_price(
-            #     trade.stop_loss * (0.99 if trade.side == "BUY" else 1.01), info
-            # ),
-            "stopPrice": format_price(trade.stop_loss, info),
-            "newOrderRespType": "FULL",
-        }
+            params = {
+                "symbol": trade.symbol,
+                "side": "SELL" if trade.side == "BUY" else "BUY",
+                # "stopLimitTimeInForce": "GTC",
+                # "stopLimitPrice": format_price(
+                #     trade.stop_loss * (0.99 if trade.side == "BUY" else 1.01), info
+                # ),
+                "stopPrice": format_price(trade.stop_loss, info),
+                "newOrderRespType": "FULL",
+            }
 
-        qty = float(trade.open_order["executedQty"])
-        paramsOne = params.copy()
-        # TODO: We are setting the OCO value to market if the target has been hit.
-        # This seems to work. Which means the or_market order will only
-        # be required if the market price changes. The right way is to probably do a catch and then do a market
-        # if the OCO fails for price reasons.
-        paramsOne["price"] = format_price(max([trade.targets[2], current_price]), info)
-        paramsOne["quantity"] = format_quantity(qty / 2, info)
-        responseOne = self.send_oco_or_market(paramsOne, current_price)
+            qty = float(trade.open_order["executedQty"])
+            paramsOne = params.copy()
+            # TODO: We are setting the OCO value to market if the target has been hit.
+            # This seems to work. Which means the or_market order will only
+            # be required if the market price changes. The right way is to probably do a catch and then do a market
+            # if the OCO fails for price reasons.
+            paramsOne["price"] = format_price(
+                max([trade.targets[2], current_price]), info
+            )
+            paramsOne["quantity"] = format_quantity(qty / 2, info)
+            responseOne = self.send_oco_or_market(paramsOne, current_price)
 
-        paramsTwo = params.copy()
-        paramsTwo["price"] = format_price(max([trade.targets[4], current_price]), info)
-        paramsTwo["quantity"] = format_quantity(qty - paramsOne["quantity"], info)
+            paramsTwo = params.copy()
+            paramsTwo["price"] = format_price(
+                max([trade.targets[4], current_price]), info
+            )
+            paramsTwo["quantity"] = format_quantity(qty - paramsOne["quantity"], info)
 
-        responseTwo = self.send_oco_or_market(paramsTwo, current_price)
-        # confirmedOrderOne = self.client.get_order(
-        #     trade.symbol, orderId=responseOne["orderId"]
-        # )
-        # confirmedOrderTwo = self.client.get_order(
-        #     trade.symbol, orderId=responseTwo["orderId"]
-        # )
+            responseTwo = self.send_oco_or_market(paramsTwo, current_price)
+            # confirmedOrderOne = self.client.get_order(
+            #     trade.symbol, orderId=responseOne["orderId"]
+            # )
+            # confirmedOrderTwo = self.client.get_order(
+            #     trade.symbol, orderId=responseTwo["orderId"]
+            # )
 
-        trade.close_orders = [responseOne, responseTwo]
+            trade.close_orders = [responseOne, responseTwo]
 
-        session.add(trade)
-        session.commit()
-        logging.info(f"New oco orders => {trade.id} : {trade.close_orders}")
+            session.add(trade)
+            session.commit()
+            logging.info(f"New oco orders => {trade.id} : {trade.close_orders}")
+        except:
+            logging.error(f"Could not create new oco orders => {trade.id}")
 
         return trade
 
