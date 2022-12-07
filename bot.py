@@ -24,6 +24,7 @@ session = sessionmaker(bind=engine)()
 
 # CONSTANTS
 ORDER_SIZE = 100  # USD per trade
+ORDER_EXPIRY_TIME_HOURS = 24 * 2  # 2 days
 
 # SETUP LOGGING to log to file with timestamp and console and auto-rotate
 logging.basicConfig(
@@ -73,6 +74,24 @@ def fetch_unseen_trades(latest_first: bool = True, limit=10, lookback_hours=1):
         .filter(TradingCall.bragged is False)
         .order_by(TradingCall.id.desc() if latest_first else TradingCall.id.asc())
         .limit(limit)
+        .all()
+    )
+
+
+def get_pending_opening_limit_orders():
+    return (
+        session.query(TradingCall)
+        .filter(TradingCall.open_order.is_not(None))
+        .filter(TradingCall.close_order.is_(None))
+        .all()
+    )
+
+
+def get_pending_closing_limit_orders():
+    return (
+        session.query(TradingCall)
+        .filter(TradingCall.close_order.is_not(None))
+        .filter(TradingCall.completed is False)
         .all()
     )
 
@@ -180,6 +199,30 @@ class BinanceAPI:
             if trade.open_order.get("status", None) == "FILLED"
         ]
 
+    def filter_expired_open_orders(self, trades, max_expiry_hours):
+        return [
+            trade
+            for trade in trades
+            if trade.open_order.get("status", None) == "NEW"
+            and (
+                datetime.datetime.now()
+                - datetime.datetime.fromtimestamp(trade.open_order.get("time"))
+            )
+            > datetime.timedelta(hours=max_expiry_hours)
+        ]
+
+    def filter_expired_close_orders(self, trades, max_expiry_hours):
+        return [
+            trade
+            for trade in trades
+            if trade.close_order.get("status", None) == "NEW"
+            and (
+                datetime.datetime.now()
+                - datetime.datetime.fromtimestamp(trade.close_order.get("time"))
+            )
+            > datetime.timedelta(hours=max_expiry_hours)
+        ]
+
     def send_close_or_market(self, params, current_price):
         return (
             self.client.new_order(
@@ -236,35 +279,52 @@ class BinanceAPI:
 
         return trade
 
-    def send_close_order(self, filledOrders: list[TradingCall]):
+    def send_close_orders(self, filledOrders: list[TradingCall]):
         return [self.send_close_order(trade) for trade in filledOrders]
+
+    def send_cancel_open_orders(self, trades: list[TradingCall]):
+        for trade in trades:
+            self.client.cancel_order(trade.symbol, orderId=trade.open_order["orderId"])
+            trade.completed = True
+            trade.reason = "Open Order took too long to fill"
+            session.commit()
+            logging.info(f"Cancelled open order => {trade.id}")
+
+    def send_cancel_close_orders(self, trades: list[TradingCall]):
+        for trade in trades:
+            self.client.cancel_order(trade.symbol, orderId=trade.close_order["orderId"])
+            trade.completed = True
+            trade.reason = "Close order took too long to fill"
+            session.commit()
+            logging.info(f"Cancelled close order => {trade.id}")
 
 
 def step(binance_api: BinanceAPI):
-    pendingOpeningLimitOrders = (
-        session.query(TradingCall)
-        .filter(TradingCall.open_order.is_not(None))
-        .filter(TradingCall.close_order.is_(None))
-        .all()
-    )
     logging.info("--- NEW STEP ---")
-    logging.info(f"Pending opening limit orders => {pendingOpeningLimitOrders}")
 
-    # for o in pendingLimitOrders:
-    #     o.open_order = sql.null()
-    # session.commit()
-    # return
+    pendingOpeningLimitOrders = get_pending_opening_limit_orders()
+    logging.info(f"Pending opening limit orders => {pendingOpeningLimitOrders}")
     filledOpeningLimitOrders = binance_api.filter_filled_opening_orders(
         binance_api.update_opening_order_statuses(pendingOpeningLimitOrders)
     )
-    binance_api.send_close_order(filledOpeningLimitOrders)
 
-    pendingClosingLimitOrders = (
-        session.query(TradingCall).filter(TradingCall.close_order.is_not(None)).all()
-    )
+    pendingClosingLimitOrders = get_pending_closing_limit_orders()
+    logging.info(f"Pending closing limit orders => {pendingClosingLimitOrders}")
     binance_api.update_closing_order_statuses(pendingClosingLimitOrders)
 
+    binance_api.send_close_orders(filledOpeningLimitOrders)
+
     # TODO: see all the pending orders and if they've been too long pending, cull
+    binance_api.send_cancel_open_orders(
+        binance_api.filter_expired_open_orders(
+            get_pending_opening_limit_orders(), ORDER_EXPIRY_TIME_HOURS
+        )
+    )
+    binance_api.send_cancel_close_orders(
+        binance_api.filter_expired_close_orders(
+            get_pending_closing_limit_orders(), ORDER_EXPIRY_TIME_HOURS
+        )
+    )
 
     # TODO stop loss
 
