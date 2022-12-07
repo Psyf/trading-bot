@@ -18,13 +18,13 @@ class TradingCall(Base):
     targets = Column(JSON, nullable=False)  # should be float[6]
     timestamp = Column(DateTime, nullable=False)
     open_order = Column(JSON)  # should be {open_order_resp}
-    close_orders = Column(JSON)  # should be {close_order_resp}[2]
+    close_order = Column(JSON)  # should be {close_order_resp}[2]
     texthash = Column(String, nullable=False)
     bragged = Column(Boolean, nullable=False, default=False)
     completed = Column(Boolean, nullable=False, default=False)
 
     def __repr__(self):
-        return f"TradingCall({self.id}, {self.timestamp}, {self.symbol}, {self.side}, entry={self.entry}, stop_loss={self.stop_loss}, targets={self.targets}, open_order={self.open_order}, close_orders={self.close_orders})"
+        return f"TradingCall({self.id}, {self.timestamp}, {self.symbol}, {self.side}, entry={self.entry}, stop_loss={self.stop_loss}, targets={self.targets}, open_order={self.open_order}, close_order={self.close_order})"
 
 
 @dataclass

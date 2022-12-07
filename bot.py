@@ -160,21 +160,14 @@ class BinanceAPI:
         return [self.update_opening_order_status(trade) for trade in pendingOrders]
 
     def update_closing_orders_status(self, trade: TradingCall):
-        orderOne = self.client.get_order(
-            trade.symbol, orderId=trade.close_orders[0]["orderId"]
+        order = self.client.get_order(
+            trade.symbol, orderId=trade.close_order["orderId"]
         )
-        orderTwo = orderOne = self.client.get_order(
-            trade.symbol, orderId=trade.close_orders[1]["orderId"]
-        )
-        if orderOne["status"] != trade.close_orders[0].get("status", None) or orderTwo[
-            "status"
-        ] != trade.close_orders[1].get("status", None):
-            trade.close_orders = [orderOne, orderTwo]
+        if order["status"] != trade.close_order["orderId"].get("status", None):
+            trade.close_order = order
             session.add(trade)
             session.commit()
-            logging.info(
-                f"Filled closing limit order => {trade.id} : {orderOne, orderTwo}"
-            )
+            logging.info(f"Filled closing limit order => {trade.id} : {order}")
         return trade
 
     def update_closing_orders_statuses(self, pendingOrders: list[TradingCall]):
@@ -225,46 +218,25 @@ class BinanceAPI:
                     trade.open_order["executedQty"] * (1 / 1000)
                 )  # account for the 0.1% fee binance has on trades
             )
-            paramsOne = params.copy()
             # TODO: We are setting the OCO value to market if the target has been hit.
             # This seems to work. Which means the or_market order will only
             # be required if the market price changes. The right way is to probably do a catch and then do a market
             # if the OCO fails for price reasons.
-            paramsOne["price"] = format_price(
-                max([trade.targets[2], current_price]), info
-            )
-            paramsOne["quantity"] = format_quantity(qty / 2, info)
-            responseOne = self.send_close_or_market(paramsOne, current_price)
+            params["price"] = format_price(max([trade.targets[3], current_price]), info)
+            params["quantity"] = format_quantity(qty, info)
+            response = self.send_close_or_market(params, current_price)
 
-            trade.close_orders = [responseOne]
+            trade.close_order = response
             session.add(trade)
             session.commit()
-            logging.info(f"New close order => {trade.id} : {responseOne}")
+            logging.info(f"New close order => {trade.id} : {response}")
 
-            paramsTwo = params.copy()
-            paramsTwo["price"] = format_price(
-                max([trade.targets[4], current_price]), info
-            )
-            paramsTwo["quantity"] = format_quantity(qty - paramsOne["quantity"], info)
-
-            responseTwo = self.send_close_or_market(paramsTwo, current_price)
-            # confirmedOrderOne = self.client.get_order(
-            #     trade.symbol, orderId=responseOne["orderId"]
-            # )
-            # confirmedOrderTwo = self.client.get_order(
-            #     trade.symbol, orderId=responseTwo["orderId"]
-            # )
-
-            trade.close_orders = [responseOne, responseTwo]
-            session.add(trade)
-            session.commit()
-            logging.info(f"New close order => {trade.id} : {responseTwo}")
         except Exception as e:
             logging.error(f"Could not create new close orders => {trade.id} : {e}")
 
         return trade
 
-    def send_close_orders(self, filledOrders: list[TradingCall]):
+    def send_close_order(self, filledOrders: list[TradingCall]):
         return [self.send_close_order(trade) for trade in filledOrders]
 
 
@@ -272,7 +244,7 @@ def step(binance_api: BinanceAPI):
     pendingOpeningLimitOrders = (
         session.query(TradingCall)
         .filter(TradingCall.open_order.is_not(None))
-        .filter(TradingCall.close_orders.is_(None))
+        .filter(TradingCall.close_order.is_(None))
         .all()
     )
     logging.info("--- NEW STEP ---")
@@ -285,10 +257,10 @@ def step(binance_api: BinanceAPI):
     filledOpeningLimitOrders = binance_api.filter_filled_opening_orders(
         binance_api.update_opening_order_statuses(pendingOpeningLimitOrders)
     )
-    binance_api.send_close_orders(filledOpeningLimitOrders)
+    binance_api.send_close_order(filledOpeningLimitOrders)
 
     pendingClosingLimitOrders = (
-        session.query(TradingCall).filter(TradingCall.close_orders.is_not(None)).all()
+        session.query(TradingCall).filter(TradingCall.close_order.is_not(None)).all()
     )
     binance_api.update_closing_orders_statuses(pendingClosingLimitOrders)
 
