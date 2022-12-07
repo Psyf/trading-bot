@@ -70,6 +70,7 @@ def fetch_unseen_trades(latest_first: bool = True, limit=10, lookback_hours=1):
             TradingCall.timestamp
             >= datetime.datetime.now() - datetime.timedelta(hours=lookback_hours)
         )
+        .filter(TradingCall.bragged is False)
         .order_by(TradingCall.id.desc() if latest_first else TradingCall.id.asc())
         .limit(limit)
         .all()
@@ -124,6 +125,7 @@ class BinanceAPI:
                 "price": format_price(max(iter(trade.entry)), info),
                 # TODO this might help avoid calling get_order again. need to confirm
                 "newOrderRespType": "FULL",
+                # TODO "timeInForce" we probably want FOK or GTX
             }
 
             response = self.client.new_order(**params)
@@ -214,6 +216,7 @@ class BinanceAPI:
                 # ),
                 "type": "LIMIT_MAKER",
                 "newOrderRespType": "FULL",
+                # TODO "timeInForce" we probably want FOK or GTX
             }
 
             qty = float(
@@ -233,7 +236,10 @@ class BinanceAPI:
             paramsOne["quantity"] = format_quantity(qty / 2, info)
             responseOne = self.send_close_or_market(paramsOne, current_price)
 
-            # TODO: if second req fails, nothing gets recorded... need to fix
+            trade.close_orders = [responseOne]
+            session.add(trade)
+            session.commit()
+            logging.info(f"New close order => {trade.id} : {responseOne}")
 
             paramsTwo = params.copy()
             paramsTwo["price"] = format_price(
@@ -250,10 +256,9 @@ class BinanceAPI:
             # )
 
             trade.close_orders = [responseOne, responseTwo]
-
             session.add(trade)
             session.commit()
-            logging.info(f"New close orders => {trade.id} : {trade.close_orders}")
+            logging.info(f"New close order => {trade.id} : {responseTwo}")
         except Exception as e:
             logging.error(f"Could not create new close orders => {trade.id} : {e}")
 
@@ -287,6 +292,8 @@ def step(binance_api: BinanceAPI):
     )
     binance_api.update_closing_orders_statuses(pendingClosingLimitOrders)
 
+    # TODO: see all the pending orders and if they've been too long pending, cull
+
     # TODO stop loss
 
     # Get account and balance information
@@ -309,7 +316,6 @@ def step(binance_api: BinanceAPI):
         logging.info("!!! Insufficient USDT balance !!!")
 
     # TODO: Token accounting
-    # TODO: see all the pending orders and if they've been too long pending, cull
 
 
 def main():
