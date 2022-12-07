@@ -304,7 +304,7 @@ class BinanceAPI:
             except:
                 logging.info(f"Could not cancel open order => {trade.id}")
 
-    def send_cancel_close_orders(self, trades: list[TradingCall]):
+    def send_cancel_close_orders(self, trades: list[TradingCall], reason: str):
         for trade in trades:
             try:
                 self.client.cancel_order(
@@ -317,14 +317,14 @@ class BinanceAPI:
                 self.client.new_order(
                     **{
                         "symbol": trade.symbol,
-                        "side": "SELL",
+                        "side": "SELL" if trade.side == "BUY" else "BUY",
                         "type": "MARKET",
                         "quantity": trade.close_order["origQty"],
                         "newOrderRespType": "FULL",
                     }
                 )
                 trade.completed = True
-                trade.reason = "Close order took too long to fill"
+                trade.reason = reason
                 session.commit()
                 logging.info(f"Cancelled close order => {trade.id}")
             except:
@@ -346,7 +346,7 @@ def step(binance_api: BinanceAPI):
 
     binance_api.send_close_orders(filledOpeningLimitOrders)
 
-    # TODO: see all the pending orders and if they've been too long pending, cull
+    # Cull limit orders taking too long to fill
     binance_api.send_cancel_open_orders(
         binance_api.filter_expired_open_orders(
             get_pending_opening_limit_orders(), ORDER_EXPIRY_TIME_HOURS
@@ -355,11 +355,14 @@ def step(binance_api: BinanceAPI):
     binance_api.send_cancel_close_orders(
         binance_api.filter_expired_close_orders(
             get_pending_closing_limit_orders(), ORDER_EXPIRY_TIME_HOURS
-        )
+        ),
+        "Close order took too long to fill",
     )
 
-    binance_api.filter_need_to_stop_loss(
-        get_pending_closing_limit_orders() + get_pending_opening_limit_orders()
+    # STOP LOSS
+    binance_api.send_cancel_close_orders(
+        binance_api.filter_need_to_stop_loss(get_pending_closing_limit_orders()),
+        "stop loss",
     )
 
     # Get account and balance information
