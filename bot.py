@@ -154,8 +154,8 @@ class BinanceAPI:
             logging.info(f"Filled limit order => {trade.id} : {order}")
         return trade
 
-    def update_closing_orders_statuses(self, pendingOrders: list[TradingCall]):
-        return [self.update_closing_orders_status(trade) for trade in pendingOrders]
+    def update_opening_order_statuses(self, pendingOrders: list[TradingCall]):
+        return [self.update_opening_order_status(trade) for trade in pendingOrders]
 
     def update_closing_orders_status(self, trade: TradingCall):
         orderOne = self.client.get_order(
@@ -175,8 +175,8 @@ class BinanceAPI:
             )
         return trade
 
-    def update_opening_order_statuses(self, pendingOrders: list[TradingCall]):
-        return [self.update_opening_order_status(trade) for trade in pendingOrders]
+    def update_closing_orders_statuses(self, pendingOrders: list[TradingCall]):
+        return [self.update_closing_orders_status(trade) for trade in pendingOrders]
 
     def filter_filled_opening_orders(self, trades):
         return [
