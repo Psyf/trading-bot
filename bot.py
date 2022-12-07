@@ -249,7 +249,9 @@ def step(binance_api: BinanceAPI):
     #     o.open_order = sql.null()
     # session.commit()
     # return
-    filledLimitOrders = binance_api.update_order_statuses(pendingLimitOrders)
+    filledLimitOrders = binance_api.filter_filled_orders(
+        binance_api.update_order_statuses(pendingLimitOrders)
+    )
     binance_api.send_close_orders(filledLimitOrders)
 
     # Get account and balance information
