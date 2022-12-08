@@ -10,6 +10,7 @@ from sqlalchemy.orm import sessionmaker
 import traceback
 import logging
 import sys
+import math
 
 # SETUP ENV
 dotenv_path = os.path.join(os.path.dirname(__file__), ".env")
@@ -271,9 +272,9 @@ class BinanceAPI:
             }
 
             execQty = float(trade.open_order["executedQty"])
-            qty = execQty * (
-                999 / 1000
-            )  # account for the 0.1% fee binance has on trades
+            qty = (
+                math.floor(execQty * (999 / 1000) * 100) / 100
+            )  # account for the 0.1% fee binance has on trades, rounding down to 2 decimal places
 
             # TODO: We are setting the OCO value to market if the target has been hit.
             # This seems to work. Which means the or_market order will only
