@@ -183,9 +183,12 @@ class BinanceAPI:
         order = self.client.get_order(
             trade.symbol, orderId=trade.close_order["orderId"]
         )
-        if order["status"] != trade.close_order["orderId"].get("status", None):
+        if order["status"] != trade.close_order.get("orderId", {}).get("status", None):
             trade.close_order = order
-            trade.completed = True
+            # it is necessary to fully close the position for it to be completed
+            # so, cancelled / expired etc. are not considered completed
+            # Additionally, An already completed trade cannnot be uncompleted
+            trade.completed = trade.completed or order["status"] == "FILLED"
             session.add(trade)
             session.commit()
             logging.info(f"Filled closing limit order => {trade.id} : {order}")
@@ -194,14 +197,19 @@ class BinanceAPI:
     def update_closing_order_statuses(self, pendingOrders: list[TradingCall]):
         return [self.update_closing_order_status(trade) for trade in pendingOrders]
 
-    def filter_filled_opening_orders(self, trades):
+    def filter_filled_opening_orders(
+        self,
+        trades: list[TradingCall],
+    ):
         return [
             trade
             for trade in trades
             if trade.open_order.get("status", None) == "FILLED"
         ]
 
-    def filter_expired_open_orders(self, trades, max_expiry_hours):
+    def filter_expired_open_orders(
+        self, trades: list[TradingCall], max_expiry_hours: int
+    ):
         return [
             trade
             for trade in trades
@@ -213,7 +221,9 @@ class BinanceAPI:
             > datetime.timedelta(hours=max_expiry_hours)
         ]
 
-    def filter_expired_close_orders(self, trades, max_expiry_hours):
+    def filter_expired_close_orders(
+        self, trades: list[TradingCall], max_expiry_hours: int
+    ):
         return [
             trade
             for trade in trades
@@ -314,6 +324,8 @@ class BinanceAPI:
                 logging.info(f"Could not cancel close order => {trade.id}")
 
             try:
+                # TODO shouldnt we store this somewhere?
+                # it might make sense to just overwrite close_order with this.
                 self.client.new_order(
                     **{
                         "symbol": trade.symbol,
