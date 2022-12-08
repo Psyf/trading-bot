@@ -225,16 +225,22 @@ class BinanceAPI:
     def filter_expired_close_orders(
         self, trades: list[TradingCall], max_expiry_hours: int
     ):
-        return [
-            trade
-            for trade in trades
-            if trade.close_order.get("status", None) == "NEW"
-            and (
-                datetime.datetime.now()
-                - datetime.datetime.fromtimestamp(trade.close_order.get("time") // 1000)
-            )
-            > datetime.timedelta(hours=max_expiry_hours)
-        ]
+        try:
+            return [
+                trade
+                for trade in trades
+                if trade.close_order.get("status", None) == "NEW"
+                and (
+                    datetime.datetime.now()
+                    - datetime.datetime.fromtimestamp(
+                        trade.close_order.get("time") // 1000
+                    )
+                )
+                > datetime.timedelta(hours=max_expiry_hours)
+            ]
+        except Exception as e:
+            logging.error(f"Could not filter close orders => {trades} : {e}")
+            return []
 
     def filter_need_to_stop_loss(self, trades):
         return [
