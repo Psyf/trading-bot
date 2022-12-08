@@ -24,14 +24,14 @@ TradingCall.metadata.create_all(engine, checkfirst=True)
 
 # SETUP LOGGING to log to file with timestamp and console and auto-rotate
 logging.basicConfig(
-    format="%(asctime)s %(message)s",
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     handlers=[
         logging.FileHandler(
             "logs/telegram-" + datetime.datetime.utcnow().strftime("%s") + ".log"
         ),
         logging.StreamHandler(sys.stdout),
     ],
-    level=logging.INFO,
+    level=logging.DEBUG,
 )
 
 
@@ -59,13 +59,35 @@ def filter_and_save(message):
         if not session.query(TradingCall).get(message.id):
             try:
                 new_call = TradingCallParser().parse(message)
-                session.add(new_call)
-                session.commit()
-                logging.info("New call => " + str(new_call))
-            except:
-                logging.error("Could not parse call => " + str(message.id))
+                if not is_duplicate(new_call):
+                    session.add(new_call)
+                    session.commit()
+                    logging.info("New call => " + str(new_call))
+            except Exception as e:
+                logging.error("Could not parse call => " + str(message.id) + str(e))
         else:
-            logging.info("Already exists => " + str(message.id))
+            logging.debug("Already exists => " + str(message.id))
+    else:
+        if message.reply_to_msg_id:
+            orig_call = session.query(TradingCall).get(message.reply_to_msg_id)
+            if orig_call is not None and orig_call.bragged == 0:
+                orig_call.bragged = 1
+                session.commit()
+                logging.info(f"Bragged/Cancelled => {message.reply_to_msg_id}")
+
+
+# for debouncing duplicate calls
+def is_duplicate(call: TradingCall):
+    duplicate = (
+        session.query(TradingCall)
+        .filter(TradingCall.timestamp > call.timestamp - datetime.timedelta(minutes=5))
+        .filter(TradingCall.texthash == call.texthash)
+        .first()
+    )
+    if duplicate:
+        return True
+    else:
+        return False
 
 
 main()
