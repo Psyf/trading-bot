@@ -40,8 +40,15 @@ logging.basicConfig(
 )
 
 
-def step_size_to_precision(ss):
-    return ss.find("1") - 1
+def step_size_to_precision(ss: str):
+    [base, mantissa] = ss.split(".")
+
+    if mantissa.find("1") != -1:
+        return mantissa.find("1") + 1
+    elif base.find("1") == 0:
+        return -1 * (len(base) - 1)
+    else:
+        raise Exception(f"Invalid step size {ss}")
 
 
 def format_quantity(qty: float, exchange_info):
