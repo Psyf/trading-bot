@@ -140,7 +140,7 @@ class BinanceAPI:
             params = {
                 "symbol": trade.symbol,
                 "side": trade.side,
-                "type": "LIMIT_MAKER",
+                "type": "LIMIT",
                 "quantity": quantity,
                 "price": format_price(max(iter(trade.entry)), info),
                 # TODO this might help avoid calling get_order again. need to confirm
@@ -271,7 +271,7 @@ class BinanceAPI:
                 # "stopLimitPrice": format_price(
                 #     trade.stop_loss * (0.99 if trade.side == "BUY" else 1.01), info
                 # ),
-                "type": "LIMIT_MAKER",
+                "type": "LIMIT",
                 "newOrderRespType": "FULL",
                 # TODO "timeInForce" we probably want FOK or GTX
             }
