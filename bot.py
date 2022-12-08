@@ -28,14 +28,14 @@ ORDER_EXPIRY_TIME_HOURS = 24 * 2  # 2 days
 
 # SETUP LOGGING to log to file with timestamp and console and auto-rotate
 logging.basicConfig(
-    format="%(asctime)s %(message)s",
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     handlers=[
         logging.FileHandler(
             "logs/binance-" + datetime.datetime.utcnow().strftime("%s") + ".log"
         ),
         logging.StreamHandler(sys.stdout),
     ],
-    level=logging.INFO,
+    level=logging.DEBUG,
 )
 
 
@@ -115,7 +115,7 @@ class BinanceAPI:
             current_price = float(self.client.avg_price(trade.symbol)["price"])
 
             if current_price < min_price or current_price > max_price:
-                logging.info("skipping {}".format(trade.symbol))
+                logging.debug("skipping {}".format(trade.symbol))
                 # for testing.
                 # trade.entry = [
                 #     round(current_price * 0.99, 5),
@@ -344,16 +344,16 @@ class BinanceAPI:
 
 
 def step(binance_api: BinanceAPI):
-    logging.info("--- NEW STEP ---")
+    logging.debug("--- NEW STEP ---")
 
     pendingOpeningLimitOrders = get_pending_opening_limit_orders()
-    logging.info(f"Pending opening limit orders => {pendingOpeningLimitOrders}")
+    logging.debug(f"Pending opening limit orders => {pendingOpeningLimitOrders}")
     filledOpeningLimitOrders = binance_api.filter_filled_opening_orders(
         binance_api.update_opening_order_statuses(pendingOpeningLimitOrders)
     )
 
     pendingClosingLimitOrders = get_pending_closing_limit_orders()
-    logging.info(f"Pending closing limit orders => {pendingClosingLimitOrders}")
+    logging.debug(f"Pending closing limit orders => {pendingClosingLimitOrders}")
     binance_api.update_closing_order_statuses(pendingClosingLimitOrders)
 
     binance_api.send_close_orders(filledOpeningLimitOrders)
@@ -390,11 +390,11 @@ def step(binance_api: BinanceAPI):
         unseen_trades = fetch_unseen_trades(
             latest_first=True, limit=int(account_balance // ORDER_SIZE)
         )
-        logging.info(f"Unseen trades => {unseen_trades}")
+        logging.debug(f"Unseen trades => {unseen_trades}")
         viable_trades = binance_api.filter_viable_trades(unseen_trades)
         pendingOpeningLimitOrders = binance_api.send_open_orders(viable_trades)
     else:
-        logging.info("!!! Insufficient USDT balance !!!")
+        logging.debug("!!! Insufficient USDT balance !!!")
 
     # TODO: Token accounting
 
