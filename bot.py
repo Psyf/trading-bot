@@ -272,7 +272,7 @@ class BinanceAPI:
             }
 
             fills = self.client.my_trades(
-                trade.symbol, order_id=trade.open_order["orderId"]
+                trade.symbol, orderId=trade.open_order["orderId"]
             )
             qty = math.floor(
                 float(trade.open_order["executedQty"])
