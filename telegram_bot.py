@@ -24,14 +24,14 @@ TradingCall.metadata.create_all(engine, checkfirst=True)
 
 # SETUP LOGGING to log to file with timestamp and console and auto-rotate
 logging.basicConfig(
-    format="%(asctime)s %(message)s",
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     handlers=[
         logging.FileHandler(
             "logs/telegram-" + datetime.datetime.utcnow().strftime("%s") + ".log"
         ),
         logging.StreamHandler(sys.stdout),
     ],
-    level=logging.INFO,
+    level=logging.DEBUG,
 )
 
 
@@ -66,7 +66,7 @@ def filter_and_save(message):
             except Exception as e:
                 logging.error("Could not parse call => " + str(message.id) + str(e))
         else:
-            logging.info("Already exists => " + str(message.id))
+            logging.debug("Already exists => " + str(message.id))
     else:
         if message.reply_to_msg_id:
             orig_call = session.query(TradingCall).get(message.reply_to_msg_id)
