@@ -63,7 +63,7 @@ def format_price(price: float, exchange_info):
     return round(price, price_precision)
 
 
-def fetch_unseen_trades(latest_first: bool = True, limit=10, lookback_hours=1):
+def fetch_unseen_trades(latest_first: bool = True, limit=10, lookback_hours=12):
     return (
         session.query(TradingCall)
         .filter(TradingCall.open_order.is_(None))
