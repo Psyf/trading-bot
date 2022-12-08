@@ -217,7 +217,7 @@ class BinanceAPI:
             if trade.open_order.get("status", None) == "NEW"
             and (
                 datetime.datetime.now()
-                - datetime.datetime.fromtimestamp(trade.open_order.get("time"))
+                - datetime.datetime.fromtimestamp(trade.open_order.get("time") // 1000)
             )
             > datetime.timedelta(hours=max_expiry_hours)
         ]
@@ -327,7 +327,10 @@ class BinanceAPI:
                         "symbol": trade.symbol,
                         "side": "SELL" if trade.side == "BUY" else "BUY",
                         "type": "MARKET",
-                        "quantity": trade.close_order["origQty"],
+                        "quantity": math.floor(
+                            float(trade.close_order["origQty"]) * (999 / 1000) * 100
+                        )
+                        / 100,
                         "newOrderRespType": "FULL",
                     }
                 )
