@@ -183,7 +183,9 @@ class BinanceAPI:
         order = self.client.get_order(
             trade.symbol, orderId=trade.close_order["orderId"]
         )
-        if order["status"] != trade.close_order.get("orderId", {}).get("status", None):
+        if order["status"] != trade.close_order.get("orderId", dict()).get(
+            "status", None
+        ):
             trade.close_order = order
             # it is necessary to fully close the position for it to be completed
             # so, cancelled / expired etc. are not considered completed
