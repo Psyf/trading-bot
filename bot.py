@@ -145,7 +145,7 @@ class BinanceAPI:
                 "price": format_price(max(iter(trade.entry)), info),
                 # TODO this might help avoid calling get_order again. need to confirm
                 "newOrderRespType": "FULL",
-                # TODO "timeInForce" we probably want FOK or GTX
+                "timeInForce": "GTC",
             }
 
             response = self.client.new_order(**params)
@@ -267,13 +267,9 @@ class BinanceAPI:
             params = {
                 "symbol": trade.symbol,
                 "side": "SELL" if trade.side == "BUY" else "BUY",
-                # "stopLimitTimeInForce": "GTC",
-                # "stopLimitPrice": format_price(
-                #     trade.stop_loss * (0.99 if trade.side == "BUY" else 1.01), info
-                # ),
                 "type": "LIMIT",
+                "timeInForce": "GTC",
                 "newOrderRespType": "FULL",
-                # TODO "timeInForce" we probably want FOK or GTX
             }
 
             qty = float(
