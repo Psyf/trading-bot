@@ -273,7 +273,7 @@ class BinanceAPI:
 
             qty = math.floor(
                 float(trade.open_order["executedQty"])
-                - sum(float(item["commission"]) for item in trade.close_order["fills"])
+                - sum(float(item["commission"]) for item in trade.open_order["fills"])
             )  # account for the 0.1% fee binance has on trades, rounding down to 2 decimal places
 
             # TODO: We are setting the OCO value to market if the target has been hit.
@@ -290,7 +290,9 @@ class BinanceAPI:
             logging.info(f"New close order => {trade.id} : {response}")
 
         except Exception as e:
-            logging.error(f"Could not create new close order => {trade.id} : {e}")
+            logging.error(
+                f"Could not create new close order => {trade.id} : {e} {traceback.format_exc()}"
+            )
 
         return trade
 
