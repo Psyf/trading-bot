@@ -224,7 +224,10 @@ class BinanceAPI:
             if trade.open_order.get("status", None) == "NEW"
             and (
                 datetime.datetime.now()
-                - datetime.datetime.fromtimestamp(trade.open_order.get("time") // 1000)
+                - datetime.datetime.fromtimestamp(
+                    trade.open_order.get("time", None)
+                    or trade.open_order.get("transactTime", None) // 1000
+                )
             )
             > datetime.timedelta(hours=max_expiry_hours)
         ]
@@ -240,7 +243,8 @@ class BinanceAPI:
                 and (
                     datetime.datetime.now()
                     - datetime.datetime.fromtimestamp(
-                        trade.close_order.get("time") // 1000
+                        trade.close_order.get("time", None)
+                        or trade.close_order.get("transactTime", None) // 1000
                     )
                 )
                 > datetime.timedelta(hours=max_expiry_hours)
