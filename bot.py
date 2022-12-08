@@ -272,12 +272,9 @@ class BinanceAPI:
                 "newOrderRespType": "FULL",
             }
 
-            qty = float(
-                trade.open_order["executedQty"]
-                - (
-                    trade.open_order["executedQty"] * (1 / 1000)
-                )  # account for the 0.1% fee binance has on trades
-            )
+            execQty = float(trade.open_order["executedQty"])
+            qty = execQty * (999 / 1000)  # account for the 0.1% fee binance has on trades
+
             # TODO: We are setting the OCO value to market if the target has been hit.
             # This seems to work. Which means the or_market order will only
             # be required if the market price changes. The right way is to probably do a catch and then do a market
@@ -292,7 +289,7 @@ class BinanceAPI:
             logging.info(f"New close order => {trade.id} : {response}")
 
         except Exception as e:
-            logging.error(f"Could not create new close orders => {trade.id} : {e}")
+            logging.error(f"Could not create new close order => {trade.id} : {e}")
 
         return trade
 
