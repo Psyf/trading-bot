@@ -183,9 +183,7 @@ class BinanceAPI:
         order = self.client.get_order(
             trade.symbol, orderId=trade.close_order["orderId"]
         )
-        if order["status"] != trade.close_order.get("orderId", dict()).get(
-            "status", None
-        ):
+        if order["status"] != trade.close_order.get("status", None):
             trade.close_order = order
             # it is necessary to fully close the position for it to be completed
             # so, cancelled / expired etc. are not considered completed
@@ -273,7 +271,9 @@ class BinanceAPI:
             }
 
             execQty = float(trade.open_order["executedQty"])
-            qty = execQty * (999 / 1000)  # account for the 0.1% fee binance has on trades
+            qty = execQty * (
+                999 / 1000
+            )  # account for the 0.1% fee binance has on trades
 
             # TODO: We are setting the OCO value to market if the target has been hit.
             # This seems to work. Which means the or_market order will only
