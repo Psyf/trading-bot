@@ -73,6 +73,7 @@ def filter_and_save(message):
             if orig_call is not None and orig_call.bragged is False:
                 orig_call.bragged = True
                 session.commit()
+                logging.info(f"Bragged/Cancelled => {message.reply_to_msg_id}")
 
 
 # for debouncing duplicate calls
