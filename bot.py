@@ -271,9 +271,9 @@ class BinanceAPI:
                 "newOrderRespType": "FULL",
             }
 
-            execQty = float(trade.open_order["executedQty"])
-            qty = (
-                math.floor(execQty * (999 / 1000) * 100) / 100
+            qty = math.floor(
+                float(trade.open_order["executedQty"])
+                - sum(float(item["commission"]) for item in trade.close_order["fills"])
             )  # account for the 0.1% fee binance has on trades, rounding down to 2 decimal places
 
             # TODO: We are setting the OCO value to market if the target has been hit.
@@ -328,9 +328,12 @@ class BinanceAPI:
                         "side": "SELL" if trade.side == "BUY" else "BUY",
                         "type": "MARKET",
                         "quantity": math.floor(
-                            float(trade.close_order["origQty"]) * (999 / 1000) * 100
-                        )
-                        / 100,
+                            float(trade.close_order["origQty"])
+                            - sum(
+                                float(item["commission"])
+                                for item in trade.close_order["fills"]
+                            )
+                        ),
                         "newOrderRespType": "FULL",
                     }
                 )
