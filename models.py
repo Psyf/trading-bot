@@ -1,4 +1,13 @@
-from sqlalchemy import Column, Integer, String, DateTime, Float, JSON, Enum, Boolean
+from sqlalchemy import (
+    Column,
+    Integer,
+    String,
+    DateTime,
+    Float,
+    JSON,
+    Enum,
+    SMALLINT,
+)
 from sqlalchemy.ext.declarative import declarative_base
 from dataclasses import dataclass
 import datetime
@@ -20,8 +29,8 @@ class TradingCall(Base):
     open_order = Column(JSON)  # should be {open_order}
     close_order = Column(JSON)  # should be {close_order}
     texthash = Column(String, nullable=False)
-    bragged = Column(Boolean, nullable=False, default=False)
-    completed = Column(Boolean, nullable=False, default=False)
+    bragged = Column(SMALLINT, nullable=False, server_default="0")
+    completed = Column(SMALLINT, nullable=False, server_default="0")
     reason = Column(String, nullable=True)
 
     def __repr__(self):

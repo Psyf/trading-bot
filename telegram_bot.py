@@ -70,10 +70,12 @@ def filter_and_save(message):
     else:
         if message.reply_to_msg_id:
             orig_call = session.query(TradingCall).get(message.reply_to_msg_id)
-            if orig_call is not None and orig_call.bragged is False:
-                orig_call.bragged = True
+            if orig_call is not None and orig_call.bragged == 0:
+                orig_call.bragged = 1
                 session.commit()
-                logging.info(f"Bragged/Cancelled => {message.reply_to_msg_id}")
+                logging.info(
+                    f"Bragged/Cancelled => {message.reply_to_msg_id} : {orig_call}"
+                )
 
 
 # for debouncing duplicate calls

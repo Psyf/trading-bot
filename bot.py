@@ -71,7 +71,7 @@ def fetch_unseen_trades(latest_first: bool = True, limit=10, lookback_hours=12):
             TradingCall.timestamp
             >= datetime.datetime.now() - datetime.timedelta(hours=lookback_hours)
         )
-        .filter(TradingCall.bragged is False)
+        .filter(TradingCall.bragged == 0)
         .order_by(TradingCall.id.desc() if latest_first else TradingCall.id.asc())
         .limit(limit)
         .all()
@@ -83,7 +83,7 @@ def get_pending_opening_limit_orders():
         session.query(TradingCall)
         .filter(TradingCall.open_order.is_not(None))
         .filter(TradingCall.close_order.is_(None))
-        .filter(TradingCall.completed is False)
+        .filter(TradingCall.completed == 0)
         .all()
     )
 
@@ -92,7 +92,7 @@ def get_pending_closing_limit_orders():
     return (
         session.query(TradingCall)
         .filter(TradingCall.close_order.is_not(None))
-        .filter(TradingCall.completed is False)
+        .filter(TradingCall.completed == 0)
         .all()
     )
 
@@ -190,7 +190,7 @@ class BinanceAPI:
             # it is necessary to fully close the position for it to be completed
             # so, cancelled / expired etc. are not considered completed
             # Additionally, An already completed trade cannnot be uncompleted
-            trade.completed = trade.completed or order["status"] == "FILLED"
+            trade.completed = 1 if trade.completed or order["status"] == "FILLED" else 0
             session.add(trade)
             session.commit()
             logging.info(f"Filled closing limit order => {trade.id} : {order}")
@@ -309,7 +309,7 @@ class BinanceAPI:
                 self.client.cancel_order(
                     trade.symbol, orderId=trade.open_order["orderId"]
                 )
-                trade.completed = True
+                trade.completed = 1
                 trade.reason = "Open Order took too long to fill"
                 session.commit()
                 logging.info(f"Cancelled open order => {trade.id}")
@@ -337,7 +337,7 @@ class BinanceAPI:
                         "newOrderRespType": "FULL",
                     }
                 )
-                trade.completed = True
+                trade.completed = 1
                 trade.reason = reason
                 session.commit()
                 logging.info(f"Cancelled close order => {trade.id}")
