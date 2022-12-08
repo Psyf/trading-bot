@@ -25,7 +25,7 @@ class TradingCall(Base):
     reason = Column(String, nullable=True)
 
     def __repr__(self):
-        return f"TradingCall({self.id}, {self.timestamp}, {self.symbol}, {self.side}, entry={self.entry}, stop_loss={self.stop_loss}, targets={self.targets}, open_order={self.open_order}, close_order={self.close_order})"
+        return f"TradingCall({self.id}, {self.timestamp}, {self.symbol}, {self.side}, entry={self.entry}, stop_loss={self.stop_loss}, targets={self.targets}, open_order={self.open_order}, close_order={self.close_order}, texthash={self.texthash}, bragged={self.bragged}, completed={self.completed}, reason={self.reason})"
 
 
 @dataclass
