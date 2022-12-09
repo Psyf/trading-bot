@@ -12,6 +12,7 @@ binance-connector = "^1.18.0"
 python-dotenv = "^0.21.0"
 telethon = "^1.26.0"
 sqlalchemy = "^1.4.44"
+binance-futures-connector = "^3.2.0"
 
 
 [tool.poetry.group.dev.dependencies]

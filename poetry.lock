@@ -69,6 +69,21 @@ service-identity = ">=21.1.0"
 Twisted = ">=21.2.0"
 
 [[package]]
+name = "binance-futures-connector"
+version = "3.2.0"
+description = "This is a lightweight library that works as a connector to Binance Futures public API."
+category = "main"
+optional = false
+python-versions = ">=3.6"
+
+[package.dependencies]
+autobahn = ">=21.2.1"
+pyOpenSSL = ">=19.0.0"
+requests = ">=2.25.1"
+service-identity = ">=21.1.0"
+Twisted = ">=22.2.0"
+
+[[package]]
 name = "black"
 version = "22.10.0"
 description = "The uncompromising code formatter."
@@ -556,7 +571,7 @@ testing = ["coverage (>=5.0.3)", "zope.event", "zope.testing"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.10"
-content-hash = "24d9245366584e928fa40677e29e45c18614e21787d435196a86615303134148"
+content-hash = "ef396f6a24300d42434fd9a77cf1df78be43fe7c134f669a3208a24e474ce7d9"
 
 [metadata.files]
 attrs = [
@@ -573,6 +588,10 @@ automat = [
 binance-connector = [
     {file = "binance-connector-1.18.0.tar.gz", hash = "sha256:c381ebc6faabfd24e05ac09520d18769f3f6c4f1c8d1aa85a8f20aae5ac17d3b"},
     {file = "binance_connector-1.18.0-py3-none-any.whl", hash = "sha256:4d1c077f81764862f5345c18a1963d6b990e4e09b23a9f9f51bcde328545e1f6"},
+]
+binance-futures-connector = [
+    {file = "binance-futures-connector-3.2.0.tar.gz", hash = "sha256:3ea567a19b03d03db9fc60c9d7407aa68ff879290ea5517395d8b14114696cc2"},
+    {file = "binance_futures_connector-3.2.0-py3-none-any.whl", hash = "sha256:c1ed906f050d9da0721fb87f135d609fc95d81a4141e28f173a1c264dc372475"},
 ]
 black = [
     {file = "black-22.10.0-1fixedarch-cp310-cp310-macosx_11_0_x86_64.whl", hash = "sha256:5cc42ca67989e9c3cf859e84c2bf014f6633db63d1cbdf8fdb666dcd9e77e3fa"},
