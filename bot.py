@@ -161,7 +161,7 @@ class BinanceAPI:
             logging.info(f"New opening limit order => {trade.id} : {trade.open_order}")
         except Exception as e:
             logging.error(
-                f"Could not create new opening limit order => {trade.id} : {e}"
+                f"Could not create new opening limit order => {trade.id}/{trade.symbol} : {e}"
             )
 
         return trade
@@ -311,7 +311,7 @@ class BinanceAPI:
 
         except Exception as e:
             logging.error(
-                f"Could not create new close order => {trade.id} : {e} {traceback.format_exc()}"
+                f"Could not create new close order => {trade.id}/{trade.symbol} : {e} {traceback.format_exc()}"
             )
 
         return trade
@@ -328,9 +328,11 @@ class BinanceAPI:
                 trade.completed = 1
                 trade.reason = "Open Order took too long to fill"
                 session.commit()
-                logging.info(f"Cancelled open order => {trade.id}")
+                logging.info(f"Cancelled open order => {trade.id}/{trade.symbol}")
             except:
-                logging.info(f"Could not cancel open order => {trade.id}")
+                logging.info(
+                    f"Could not cancel open order => {trade.id}/{trade.symbol}"
+                )
 
     def send_cancel_close_orders(self, trades: list[TradingCall], reason: str):
         for trade in trades:
@@ -339,7 +341,9 @@ class BinanceAPI:
                     trade.symbol, orderId=trade.close_order["orderId"]
                 )
             except:
-                logging.info(f"Could not cancel close order => {trade.id}")
+                logging.info(
+                    f"Could not cancel close order => {trade.id}/{trade.symbol}"
+                )
 
             try:
                 # TODO shouldnt we store this somewhere?
@@ -356,9 +360,9 @@ class BinanceAPI:
                 trade.completed = 1
                 trade.reason = reason
                 session.commit()
-                logging.info(f"Cancelled close order => {trade.id}")
+                logging.info(f"Cancelled close order => {trade.id}/{trade.symbol}")
             except:
-                logging.error(f"Could not market order => {trade.id}")
+                logging.error(f"Could not market order => {trade.id}/{trade.symbol}")
 
 
 def step(binance_api: BinanceAPI):
