@@ -36,8 +36,13 @@ logging.basicConfig(
         ),
         logging.StreamHandler(sys.stdout),
     ],
-    level=logging.DEBUG,
+    level=logging.INFO,
 )
+
+
+def round_down_to_precision(number, precision):
+    factor = 10**precision
+    return math.floor(number * factor) / factor
 
 
 def step_size_to_precision(step_size: str) -> int:
@@ -53,7 +58,7 @@ def format_quantity(qty: float, exchange_info):
             if i["filterType"] == "LOT_SIZE"
         ][0]
     )
-    return round(qty, qty_precision)
+    return round_down_to_precision(qty, qty_precision)
 
 
 def format_price(price: float, exchange_info):
@@ -62,7 +67,7 @@ def format_price(price: float, exchange_info):
             "tickSize"
         ]
     )
-    return round(price, price_precision)
+    return round_down_to_precision(price, price_precision)
 
 
 def fetch_unseen_trades(latest_first: bool = True, limit=10, lookback_hours=12):
@@ -290,10 +295,9 @@ class BinanceAPI:
             fills = self.client.my_trades(
                 trade.symbol, orderId=trade.open_order["orderId"]
             )
-            qty = math.floor(
-                float(trade.open_order["executedQty"])
-                - sum(float(fill["commission"]) for fill in fills)
-            )  # account for the 0.1% fee binance has on trades, rounding down to 2 decimal places
+            qty = float(trade.open_order["executedQty"]) - sum(
+                float(fill["commission"]) for fill in fills
+            )
 
             # TODO: We are setting the OCO value to market if the target has been hit.
             # This seems to work. Which means the or_market order will only
@@ -352,7 +356,7 @@ class BinanceAPI:
                         "symbol": trade.symbol,
                         "side": "SELL" if trade.side == "BUY" else "BUY",
                         "type": "MARKET",
-                        "quantity": math.floor(float(trade.close_order["origQty"])),
+                        "quantity": float(trade.close_order["origQty"]),
                         "newOrderRespType": "FULL",
                     }
                 )
