@@ -276,17 +276,16 @@ class BinanceAPI:
         )
 
     def send_close_order(self, trade: TradingCall):
+        params = {
+            "symbol": trade.symbol,
+            "side": "SELL" if trade.side == "BUY" else "BUY",
+            "type": "LIMIT",
+            "timeInForce": "GTC",
+            "newOrderRespType": "FULL",
+        }
         try:
             info = self.client.exchange_info(trade.symbol)["symbols"][0]
             current_price = float(self.client.avg_price(trade.symbol)["price"])
-
-            params = {
-                "symbol": trade.symbol,
-                "side": "SELL" if trade.side == "BUY" else "BUY",
-                "type": "LIMIT",
-                "timeInForce": "GTC",
-                "newOrderRespType": "FULL",
-            }
 
             fills = self.client.my_trades(
                 trade.symbol, orderId=trade.open_order["orderId"]
@@ -311,7 +310,7 @@ class BinanceAPI:
 
         except Exception as e:
             logging.error(
-                f"Could not create new close order => {trade.id}/{trade.symbol} : {e} {traceback.format_exc()}"
+                f"Could not create new close order => {trade.id}/{trade.symbol} : {params} : {e} {traceback.format_exc()}"
             )
 
         return trade
