@@ -1,4 +1,4 @@
-from typing import List, Type, Literal, TypeAlias
+from typing import List, Type
 from binance.spot import Spot
 from binance.um_futures import UMFutures
 from models import Trade, OrderType

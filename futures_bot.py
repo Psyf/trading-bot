@@ -23,11 +23,11 @@ engine = create_engine("sqlite:///tradingbot.db")
 SESSION = sessionmaker(bind=engine)()
 
 # CONSTANTS
-ORDER_SIZE = 1000  # USD per trade
-ORDER_EXPIRY_TIME_HOURS = 24  # 1 day
+ORDER_SIZE = 100  # USD per trade
+ORDER_EXPIRY_TIME_HOURS = 14 * 24  # 14 days
 DELAY_BETWEEN_STEPS = 10  # seconds
 TARGET_NUM = 3
-LEVERAGE = 10
+LEVERAGE = 2
 
 LOGGER = setup_logger("futoor")
 
@@ -37,6 +37,11 @@ class FuturesBot(Bot):
 
     def __init__(self, api_key, api_secret, api_url, session, logger):
         super().__init__(UMFutures, api_key, api_secret, api_url, session, logger)
+
+        if self.client.get_position_mode()["dualSidePosition"] is True:
+            self.client.change_position_mode(dualSidePosition="false")
+        if self.client.get_multi_asset_mode()["multiAssetsMargin"] is True:
+            self.client.change_multi_asset_mode(multiAssetsMargin="false")
 
     def get_price(self, symbol: str):
         return float(self.client.mark_price(symbol)["markPrice"])

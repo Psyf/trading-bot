@@ -23,7 +23,7 @@ SESSION = sessionmaker(bind=engine)()
 
 # CONSTANTS
 ORDER_SIZE = 100  # USD per trade
-ORDER_EXPIRY_TIME_HOURS = 24  # 1 day
+ORDER_EXPIRY_TIME_HOURS = 24 * 14  # 14 days
 DELAY_BETWEEN_STEPS = 10  # seconds
 TARGET_NUM = 3
 
