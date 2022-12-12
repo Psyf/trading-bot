@@ -18,6 +18,8 @@ binance-futures-connector = "^3.2.0"
 [tool.poetry.group.dev.dependencies]
 black = "^22.10.0"
 flake8 = "^6.0.0"
+sqlalchemy-stubs = "^0.4"
+mypy = "^0.991"
 
 [build-system]
 requires = ["poetry-core"]

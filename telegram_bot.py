@@ -1,13 +1,12 @@
 import datetime
 from telethon import TelegramClient, events
-from models import TradingCall
+from models import Trade
 import os
 from dotenv import load_dotenv
 from parse_call import TradingCallParser
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-import logging
-import sys
+from utils import setup_logger
 
 dotenv_path = os.path.join(os.path.dirname(__file__), ".env")
 load_dotenv(dotenv_path)
@@ -19,20 +18,9 @@ client = TelegramClient(
 # Create an engine that connects to the database
 engine = create_engine("sqlite:///tradingbot.db")
 session = sessionmaker(bind=engine)()
-TradingCall.metadata.create_all(engine, checkfirst=True)
+Trade.metadata.create_all(engine, checkfirst=True)
 
-
-# SETUP LOGGING to log to file with timestamp and console and auto-rotate
-logging.basicConfig(
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    handlers=[
-        logging.FileHandler(
-            "logs/telegram-" + datetime.datetime.utcnow().strftime("%s") + ".log"
-        ),
-        logging.StreamHandler(sys.stdout),
-    ],
-    level=logging.DEBUG,
-)
+logger = setup_logger("tradingbot")
 
 
 def main():
@@ -56,32 +44,32 @@ async def handler(event):
 
 def filter_and_save(message):
     if "setup" in message.text.lower():
-        if not session.query(TradingCall).get(message.id):
+        if not session.query(Trade).get(message.id):
             try:
                 new_call = TradingCallParser().parse(message)
                 if not is_duplicate(new_call):
                     session.add(new_call)
                     session.commit()
-                    logging.info("New call => " + str(new_call))
+                    logger.info("New call => " + str(new_call))
             except Exception as e:
-                logging.error("Could not parse call => " + str(message.id) + str(e))
+                logger.error("Could not parse call => " + str(message.id) + str(e))
         else:
-            logging.debug("Already exists => " + str(message.id))
+            logger.debug("Already exists => " + str(message.id))
     else:
         if message.reply_to_msg_id:
-            orig_call = session.query(TradingCall).get(message.reply_to_msg_id)
+            orig_call = session.query(Trade).get(message.reply_to_msg_id)
             if orig_call is not None and orig_call.bragged == 0:
                 orig_call.bragged = 1
                 session.commit()
-                logging.info(f"Bragged/Cancelled => {message.reply_to_msg_id}")
+                logger.info(f"Bragged/Cancelled => {message.reply_to_msg_id}")
 
 
 # for debouncing duplicate calls
-def is_duplicate(call: TradingCall):
+def is_duplicate(call: Trade):
     duplicate = (
-        session.query(TradingCall)
-        .filter(TradingCall.timestamp > call.timestamp - datetime.timedelta(minutes=5))
-        .filter(TradingCall.texthash == call.texthash)
+        session.query(Trade)
+        .filter(Trade.timestamp > call.timestamp - datetime.timedelta(minutes=5))
+        .filter(Trade.texthash == call.texthash)
         .first()
     )
     if duplicate:

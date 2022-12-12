@@ -1,5 +1,8 @@
-__pycache__/*
+__pycache__/
 .env
 *.db
 *.session
 logs/*.log
+.vscode/
+.venv/
+.mypy_cache/

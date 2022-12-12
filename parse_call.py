@@ -1,5 +1,5 @@
 import re
-from models import TradingCall
+from models import Trade
 from hashlib import sha256
 
 
@@ -8,7 +8,7 @@ class TradingCallParser:
         pass
 
     def tokenize(self, txt: str) -> dict[str, str]:
-        match = re.search(r"setup:\*\* ([a-z]+)", txt)
+        match = re.search(r"setup:\*\* (.*)", txt)
         if match:
             return {"symbol": match.group(1).upper()}
 
@@ -32,7 +32,7 @@ class TradingCallParser:
             return {"target": match.group(1)}
         return {}
 
-    def parse(self, message) -> TradingCall:
+    def parse(self, message) -> Trade:
         # Parse the text
         targets = list()
         entry = list()
@@ -49,7 +49,7 @@ class TradingCallParser:
 
         # TODO: some validation to make sure it was parsed proper
 
-        return TradingCall(
+        return Trade(
             id=message.id,
             symbol=parsed_data["symbol"],
             side=parsed_data["side"],  # type: ignore
