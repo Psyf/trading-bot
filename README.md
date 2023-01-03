@@ -1,3 +1,10 @@
+## How to run 
+1. Setup Pyenv+Poetry on a local venv and `poetry install`
+2. Fill up `.env` with the necessary environment variables 
+3. Run telegram_bot.py so you can start syncing the messages in the group "Over99PercentWins". You need to be join the group beforehand. 
+4. Run future_bot.py so it can start trading. We recommend trying on the futures testnet first for some time to see if everything is going according to plan. 
+5. To reset, kill the scripts above and delete sqlite db (a local file) AND clear your futures positions on binance. Important to do both, else will fuck up. 
+
 ## Expected Value
 
 We know the following:
@@ -13,6 +20,6 @@ Simplistic model 2 -> either reaches target 3, or is sold off somewhere between 
 
 Decision: Wing it.
 
-## Strategy
+## Strategy - TODO
 
-<TODO>
+
